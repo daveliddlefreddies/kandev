@@ -811,6 +811,31 @@ jobs:
           echo "::error::web-bundle upload failed after 3 attempts." >&2
           exit 1
 
+      - name: Build browser demo
+        env:
+          KANDEV_VERSION: ${{ needs.prepare.outputs.tag }}
+        run: ./scripts/browser-demo/build-web-demo.sh apps/web/dist-browser-demo
+
+      - name: Package browser demo
+        run: |
+          set -euo pipefail
+          mkdir -p dist/release-assets
+          tar -czf dist/release-assets/kandev-browser-demo.tar.gz \
+            -C apps/web/dist-browser-demo .
+          actual_bytes="$(stat -c %s dist/release-assets/kandev-browser-demo.tar.gz)"
+          max_bytes=26214400
+          echo "Browser demo compressed size: $actual_bytes bytes (max: $max_bytes)"
+          if [ "$actual_bytes" -gt "$max_bytes" ]; then
+            echo "::error::Browser demo exceeds the 25 MiB compressed-size budget." >&2
+            exit 1
+          fi
+          (cd dist/release-assets && sha256sum kandev-browser-demo.tar.gz > kandev-browser-demo.tar.gz.sha256)
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-demo
+          path: dist/release-assets/kandev-browser-demo.tar.gz*
+
   build-remote-helpers:
     name: Build canonical remote helpers
     needs: [prepare, nightly-prepare]
@@ -2062,6 +2087,7 @@ jobs:
         !inputs.dry_run &&
         !inputs.desktop_validation_only &&
         needs.prepare.result == 'success' &&
+        needs.build-web.result == 'success' &&
         needs.build-remote-helpers.result == 'success' &&
         needs.build-bundles.result == 'success' &&
         needs.build-desktop.result == 'success'
@@ -2583,6 +2609,7 @@ jobs:
     needs:
       [
         prepare,
+        build-web,
         build-remote-helpers,
         build-bundles,
         build-desktop,
@@ -2679,6 +2706,16 @@ jobs:
           name: verified-release-assets
           path: dist/release-assets
 
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: browser-demo
+          path: dist/release-assets
+
+      - name: Verify browser demo asset
+        run: |
+          test -f dist/release-assets/kandev-browser-demo.tar.gz
+          (cd dist/release-assets && sha256sum -c kandev-browser-demo.tar.gz.sha256)
+
       - name: Record runtime asset sizes
         env:
           COMPACT_RUNTIME_CONTRACT: ${{ needs.prepare.outputs.compact_runtime_contract }}
@@ -2754,6 +2791,8 @@ jobs:
             dist/release-assets/agentctl-*.gz.sha256
             dist/release-assets/kandev-desktop-*
             dist/release-assets/runtime-size-report.md
+            dist/release-assets/kandev-browser-demo.tar.gz
+            dist/release-assets/kandev-browser-demo.tar.gz.sha256
             dist/release-assets/latest.json
           preserve_order: true
 
