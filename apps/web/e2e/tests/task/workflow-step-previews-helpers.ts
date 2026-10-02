@@ -27,18 +27,26 @@ export async function expectWorkflowStepPreviewsLoaded(
 export async function expectStepsInOrder(page: Page, workflowId: string, stepNames: string[]) {
   const group = page.getByTestId("workflow-option-steps-" + workflowId);
   await expect(group).toBeVisible();
-  const firstStep = stepNames[0];
-  if (!firstStep) throw new Error(`Workflow ${workflowId} should have at least one step`);
-  await expect(group.getByText(firstStep, { exact: true })).toBeVisible();
-  const renderedTexts = await group.getByText(/./).allTextContents();
-  let previousPosition = -1;
-  for (const name of stepNames) {
-    const position = renderedTexts.indexOf(name);
-    expect(position, `Expected workflow ${workflowId} to render step ${name}`).toBeGreaterThan(
-      previousPosition,
-    );
-    previousPosition = position;
-  }
+  if (stepNames.length === 0) throw new Error(`Workflow ${workflowId} should have at least one step`);
+  await expect(group.getByText(stepNames[0]!, { exact: true })).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        const renderedTexts = await group.getByText(/./).allTextContents();
+        let previousPosition = -1;
+        for (const name of stepNames) {
+          const position = renderedTexts.indexOf(name);
+          if (position <= previousPosition) return false;
+          previousPosition = position;
+        }
+        return true;
+      },
+      {
+        timeout: 15_000,
+        message: `workflow ${workflowId} should render its steps in order`,
+      },
+    )
+    .toBe(true);
 }
 
 export async function expectUnbrokenStepToFitGroup(
