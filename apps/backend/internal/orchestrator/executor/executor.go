@@ -737,7 +737,7 @@ type LaunchOptions struct {
 	PriorACPSession         string // ACP session ID to resume for the same concrete profile
 	WorkflowStepID          string
 	StartAgent              bool
-	McpMode                 string // MCP tool mode: empty task default, McpModeTaskTitlePending, McpModeConfig, McpModeOffice, or McpModeAutomation
+	McpMode                 string // MCP tool mode: task default, title pending, config, office, automation, coordinator, or managed conversation.
 	McpProfile              *mcpprofile.Context
 	Attachments             []v1.MessageAttachment
 	AutoCreatePR            bool
@@ -746,10 +746,6 @@ type LaunchOptions struct {
 	// selected session already has an active agent. Other internal launch paths
 	// retain their existing workspace reuse behavior.
 	RefuseIfAgentRunning bool
-	McpMode              string // MCP tool mode: task default, title pending, config, office, automation, coordinator, or managed conversation.
-	McpProfile           *mcpprofile.Context
-	Attachments          []v1.MessageAttachment
-	Env                  map[string]string
 	// AdditionalSkillSlugs are materialized for this launch in addition to the
 	// durable profile selection.
 	AdditionalSkillSlugs []string
