@@ -140,6 +140,45 @@ func TestManagedCompletionIsReplayableWhenCapturedTurnCannotClose(t *testing.T) 
 		"replay after acknowledgment must not repeat workflow or queue events")
 }
 
+func TestManagedCompletionAcknowledgesCapturedTurnAfterSuccessorStarts(t *testing.T) {
+	ctx := context.Background()
+	repo := setupTestRepo(t)
+	seedTaskAndSession(t, repo, "t-managed-completion-successor", "s-managed-completion-successor", models.TaskSessionStateRunning)
+	manager := &managedCompletionReceiptAgentManager{mockAgentManager: &mockAgentManager{}, pending: true}
+	svc := createTestServiceWithAgent(repo, newMockStepGetter(), newMockTaskRepo(), manager)
+	turns := &repoTurnService{repo: repo}
+	svc.turnService = turns
+	eventBus := &recordingEventBus{}
+	svc.eventBus = eventBus
+
+	capturedTurn, err := turns.StartTurn(ctx, "s-managed-completion-successor")
+	require.NoError(t, err)
+	require.NoError(t, turns.CompleteTurn(ctx, capturedTurn.ID))
+	successorTurn, err := turns.StartTurn(ctx, "s-managed-completion-successor")
+	require.NoError(t, err)
+	payload := &lifecycle.AgentStreamEventPayload{
+		TaskID: "t-managed-completion-successor", SessionID: "s-managed-completion-successor",
+		ExecutionID: "exec-managed-completion-successor", ManagedAgentOperationID: "operation-managed-completion-successor",
+		Data: &lifecycle.AgentStreamEventData{
+			Type: agentEventComplete, TurnID: capturedTurn.ID,
+			Data: map[string]interface{}{"remote_terminal": true, "stop_reason": "end_turn"},
+		},
+	}
+
+	svc.handleAgentStreamEvent(ctx, payload)
+	svc.handleAgentStreamEvent(ctx, payload)
+
+	require.Equal(t, 1, manager.ackCalls, "a terminal operation whose turn was already superseded should be acknowledged once")
+	require.False(t, manager.pending)
+	active, err := turns.GetActiveTurn(ctx, "s-managed-completion-successor")
+	require.NoError(t, err)
+	require.Equal(t, successorTurn.ID, active.ID, "the late completion must preserve the successor turn")
+	session, err := repo.GetTaskSession(ctx, "s-managed-completion-successor")
+	require.NoError(t, err)
+	require.Equal(t, models.TaskSessionStateRunning, session.State, "the late completion must not transition the successor session")
+	require.Empty(t, eventsForSubject(eventBus.events, events.AgentTurnMessageSaved), "a superseded completion must not repeat turn-level workflow effects")
+}
+
 func eventsForSubject(recorded []recordedEvent, subject string) []*bus.Event {
 	var events []*bus.Event
 	for _, event := range recorded {

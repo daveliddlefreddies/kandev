@@ -3244,6 +3244,23 @@ func (s *Service) resolveManagedAgentsBeforeTaskDelete(ctx context.Context, sess
 	for _, binding := range bindings {
 		if err := managed.DeleteManagedAgentBindingIfTerminal(ctx, binding.ID); err != nil {
 			if errors.Is(err, taskrepo.ErrManagedAgentActiveOperation) {
+				operation, operationErr := managed.GetManagedAgentLatestOperation(ctx, binding.ID)
+				fields := []zap.Field{
+					zap.String("task_id", binding.TaskID),
+					zap.String("session_id", binding.SessionID),
+					zap.String("binding_id", binding.ID),
+				}
+				if operationErr == nil {
+					fields = append(fields,
+						zap.String("operation_id", operation.ID),
+						zap.String("operation_turn_id", operation.RequestSnapshot.TurnID),
+						zap.String("operation_state", string(operation.State)),
+						zap.Bool("completion_pending", operation.CompletionPending),
+					)
+				} else {
+					fields = append(fields, zap.Error(operationErr))
+				}
+				s.logger.Warn("task deletion blocked by unresolved managed-agent operation", fields...)
 				return ErrManagedAgentDeleteBlocked
 			}
 			return fmt.Errorf("remove terminal managed execution before task deletion: %w", err)

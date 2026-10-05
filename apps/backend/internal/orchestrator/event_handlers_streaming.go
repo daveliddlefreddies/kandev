@@ -491,6 +491,7 @@ func (s *Service) completeTurnForStreamEvent(
 		if err := s.completeTurnForTaskSessionCheckedOwned(ctx, payload.TaskID, payload.SessionID, capturedTurnID); err != nil {
 			s.logger.Warn("failed to complete stream event's captured turn",
 				zap.String("session_id", payload.SessionID),
+				zap.String("managed_agent_operation_id", payload.ManagedAgentOperationID),
 				zap.String("turn_id", capturedTurnID),
 				zap.Error(err))
 			return err
@@ -3283,6 +3284,13 @@ func (s *Service) handleCompleteStreamEventWithGuardRelease(
 	}
 
 	s.persistCompleteStreamOutput(ctx, payload, session, completionTurnID)
+	if payload.ManagedAgentOperationID != "" && s.managedCompletionHasActiveSuccessor(ctx, payload.SessionID, completionTurnID) {
+		s.logger.Debug("acknowledging managed-agent completion for a superseded turn",
+			zap.String("session_id", payload.SessionID),
+			zap.String("managed_agent_operation_id", payload.ManagedAgentOperationID),
+			zap.String("turn_id", completionTurnID))
+		return true
+	}
 	if err := s.completeTurnForStreamEvent(ctx, payload, completionTurnID); err != nil {
 		return false
 	}
@@ -3344,6 +3352,21 @@ func (s *Service) handleCompleteStreamEventWithGuardRelease(
 	// get the guard.
 	s.setSessionWaitingForInputAfterComplete(ctx, payload, session, streamGuard)
 	return true
+}
+
+func (s *Service) managedCompletionHasActiveSuccessor(ctx context.Context, sessionID, capturedTurnID string) bool {
+	if s.turnService == nil || sessionID == "" || capturedTurnID == "" {
+		return false
+	}
+	activeTurn, err := s.turnService.GetActiveTurn(ctx, sessionID)
+	if err != nil {
+		s.logger.Warn("failed to inspect active turn before managed-agent completion",
+			zap.String("session_id", sessionID),
+			zap.String("turn_id", capturedTurnID),
+			zap.Error(err))
+		return false
+	}
+	return activeTurn != nil && activeTurn.ID != capturedTurnID
 }
 
 func (s *Service) storeCompleteEventResumeToken(ctx context.Context, payload *lifecycle.AgentStreamEventPayload) {

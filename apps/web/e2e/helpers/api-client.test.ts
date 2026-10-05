@@ -133,6 +133,44 @@ describe("ApiClient.deleteTask", () => {
   });
 });
 
+describe("ApiClient.e2eReset", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    [
+      "a task hierarchy conflict",
+      "task has children at final deletion; retry the task deletion",
+      1,
+    ],
+    ["unresolved Cursor Cloud work", "task deletion is blocked by unresolved Cursor Cloud work", 4],
+  ])(
+    "retries after %s during reset",
+    async (_reason, errorMessage, failuresBeforeSuccess) => {
+      let resetCount = 0;
+      const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).endsWith("/api/v1/app-state?path=%2Fsettings%2Fagents")) {
+          return Response.json({ interimSettingsInterlockToken: "test-token" });
+        }
+        expect(String(input)).toContain("/api/v1/e2e/reset/workspace-1?keep_workflows=workflow-1");
+        expect(init?.method).toBe("DELETE");
+        resetCount += 1;
+        if (resetCount <= failuresBeforeSuccess) {
+          return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
+        }
+        return Response.json({ deleted_tasks: 2 });
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      await new ApiClient("http://backend.test").e2eReset("workspace-1", ["workflow-1"]);
+
+      expect(resetCount).toBe(failuresBeforeSuccess + 1);
+    },
+    10_000,
+  );
+});
+
 describe("ApiClient user settings", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

@@ -158,6 +158,7 @@ func cursorCloudStreamPayload(
 		Type: "agent/event", Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
 		AgentID: binding.ExecutionID, ExecutionID: binding.ExecutionID, TaskID: binding.TaskID,
 		SessionID: binding.SessionID, OwnerKind: runtime.ExecutionOwnerTask,
-		Data: &runtime.AgentStreamEventData{Type: eventType, TurnID: operation.RequestSnapshot.TurnID},
+		ManagedAgentOperationID: operation.ID,
+		Data:                    &runtime.AgentStreamEventData{Type: eventType, TurnID: operation.RequestSnapshot.TurnID},
 	}
 }

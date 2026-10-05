@@ -57,6 +57,12 @@ test("binds an accepted unknown follow-up without submitting it again", async ({
 
   await expect(testPage.getByTestId("cursor-cloud-submission-unknown")).toBeHidden();
   await expect(testPage.getByText("Follow-up run-2 result is ready")).toBeVisible();
+  await expect
+    .poll(() => getCursorCloudSessionStatus(apiClient, task.id, task.session_id), {
+      timeout: 15000,
+      intervals: [500, 1000],
+    })
+    .toMatchObject({ remote_state: "succeeded", state: "WAITING_FOR_INPUT" });
   expect(cursorCloud.prompts).toHaveLength(2);
   expect(cursorCloud.prompts[0]).toContain("Implement the requested remote change");
   expect(cursorCloud.prompts[1]).toContain("Follow-up with an uncertain response");

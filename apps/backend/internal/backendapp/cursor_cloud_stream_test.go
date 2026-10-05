@@ -32,6 +32,9 @@ func TestProjectCursorCloudStreamPreservesMessageAndToolIdentity(t *testing.T) {
 	if first.Message.ID != "cursor-cloud-assistant-operation" || first.Message.TurnID != "turn" || !first.AppendMessage {
 		t.Fatalf("assistant projection = %+v, want stable append message", first)
 	}
+	if first.Payload.ManagedAgentOperationID != operation.ID {
+		t.Fatalf("assistant projection operation ID = %q, want %q", first.Payload.ManagedAgentOperationID, operation.ID)
+	}
 	tool := project("tool_call", map[string]any{
 		"callId": "call-1", "name": "read_file", "status": "running",
 		"truncated": map[string]any{"args": true, "output": false},

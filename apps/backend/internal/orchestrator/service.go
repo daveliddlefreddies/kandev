@@ -2652,13 +2652,7 @@ func (s *Service) startTurnForSessionWithOwnershipChecked(
 		)
 	}
 
-	if turnIDVal, ok := s.activeTurns.Load(sessionID); ok {
-		if turnID, ok := turnIDVal.(string); ok && turnID != "" {
-			s.clearInitialCreatePromptPassthroughForNewTurnInMemory(sessionID, turnID)
-			s.bindAcceptedDispatchTurn(sessionID, turnID)
-			return turnID, false, nil, nil
-		}
-	}
+	cachedTurnID, _ := s.activeTurns.Load(sessionID)
 
 	turn, err := s.turnService.GetActiveTurn(ctx, sessionID)
 	if err != nil {
@@ -2669,6 +2663,9 @@ func (s *Service) startTurnForSessionWithOwnershipChecked(
 		s.clearInitialCreatePromptPassthroughForNewTurnInMemory(sessionID, turn.ID)
 		s.bindAcceptedDispatchTurn(sessionID, turn.ID)
 		return turn.ID, false, nil, nil
+	}
+	if cachedID, ok := cachedTurnID.(string); ok && cachedID != "" {
+		s.activeTurns.CompareAndDelete(sessionID, cachedID)
 	}
 
 	if reserve {
