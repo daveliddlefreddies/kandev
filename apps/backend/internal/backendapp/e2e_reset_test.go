@@ -58,47 +58,52 @@ func TestDeleteTaskForE2EResetDiscardsWorktreeChanges(t *testing.T) {
 	}
 }
 
-func TestE2EResetDeletionOrdersChildrenBeforeParents(t *testing.T) {
+func TestOrderE2ETasksForDeletionPlacesChildrenFirst(t *testing.T) {
 	tasks := []*taskmodels.Task{
-		{ID: "root"}, {ID: "other"}, {ID: "child", ParentID: "root"},
-		{ID: "grandchild", ParentID: "child"}, {ID: "sibling", ParentID: "root"},
-		{ID: "external-child", ParentID: "outside-workspace"},
+		{ID: "root"},
+		{ID: "sibling"},
+		{ID: "child", ParentID: "root"},
+		{ID: "grandchild", ParentID: "child"},
+		{ID: "sibling-child", ParentID: "sibling"},
 	}
-	for _, reverse := range []bool{false, true} {
-		input := append([]*taskmodels.Task(nil), tasks...)
-		if reverse {
-			for i, j := 0, len(input)-1; i < j; i, j = i+1, j-1 {
-				input[i], input[j] = input[j], input[i]
-			}
+
+	ordered, err := orderE2ETasksForDeletion(tasks)
+	if err != nil {
+		t.Fatalf("orderE2ETasksForDeletion(): %v", err)
+	}
+	if len(ordered) != len(tasks) {
+		t.Fatalf("ordered task count = %d, want %d", len(ordered), len(tasks))
+	}
+
+	positions := make(map[string]int, len(ordered))
+	for index, task := range ordered {
+		positions[task.ID] = index
+	}
+	for _, task := range tasks {
+		if task.ParentID == "" {
+			continue
 		}
-		ordered, err := tasksForE2EResetDeletion(input)
-		if err != nil {
-			t.Fatal(err)
-		}
-		positions := make(map[string]int)
-		for i, task := range ordered {
-			if _, duplicate := positions[task.ID]; duplicate {
-				t.Fatalf("duplicate deletion of %s", task.ID)
-			}
-			positions[task.ID] = i
-		}
-		if len(positions) != len(tasks) {
-			t.Fatalf("deletion count = %d, want %d", len(positions), len(tasks))
-		}
-		for _, task := range tasks {
-			if parentIndex, exists := positions[task.ParentID]; exists && positions[task.ID] >= parentIndex {
-				t.Fatalf("parent %s would be deleted before child %s", task.ParentID, task.ID)
-			}
+		parentPosition, parentInList := positions[task.ParentID]
+		if parentInList && positions[task.ID] >= parentPosition {
+			t.Errorf(
+				"task %q at %d must precede parent %q at %d",
+				task.ID,
+				positions[task.ID],
+				task.ParentID,
+				parentPosition,
+			)
 		}
 	}
 }
 
-func TestE2EResetDeletionRejectsHierarchyCycleBeforeDeleting(t *testing.T) {
-	ordered, err := tasksForE2EResetDeletion([]*taskmodels.Task{
-		{ID: "a", ParentID: "b"}, {ID: "b", ParentID: "a"},
-	})
-	if err == nil || len(ordered) != 0 {
-		t.Fatalf("cyclic deletion plan = %v, %v; want no deletions and an error", ordered, err)
+func TestOrderE2ETasksForDeletionRejectsParentCycles(t *testing.T) {
+	tasks := []*taskmodels.Task{
+		{ID: "first", ParentID: "second"},
+		{ID: "second", ParentID: "first"},
+	}
+
+	if _, err := orderE2ETasksForDeletion(tasks); err == nil {
+		t.Fatal("orderE2ETasksForDeletion() error = nil, want a hierarchy cycle error")
 	}
 }
 
@@ -328,5 +333,49 @@ func assertWorkspaceRows(t *testing.T, database *sqlx.DB, table, workspaceID str
 	}
 	if got != want {
 		t.Fatalf("%s rows for %s = %d, want %d", table, workspaceID, got, want)
+	}
+}
+
+func TestE2EResetDeletionOrdersChildrenBeforeParents(t *testing.T) {
+	tasks := []*taskmodels.Task{
+		{ID: "root"}, {ID: "other"}, {ID: "child", ParentID: "root"},
+		{ID: "grandchild", ParentID: "child"}, {ID: "sibling", ParentID: "root"},
+		{ID: "external-child", ParentID: "outside-workspace"},
+	}
+	for _, reverse := range []bool{false, true} {
+		input := append([]*taskmodels.Task(nil), tasks...)
+		if reverse {
+			for i, j := 0, len(input)-1; i < j; i, j = i+1, j-1 {
+				input[i], input[j] = input[j], input[i]
+			}
+		}
+		ordered, err := orderE2ETasksForDeletion(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		positions := make(map[string]int)
+		for i, task := range ordered {
+			if _, duplicate := positions[task.ID]; duplicate {
+				t.Fatalf("duplicate deletion of %s", task.ID)
+			}
+			positions[task.ID] = i
+		}
+		if len(positions) != len(tasks) {
+			t.Fatalf("deletion count = %d, want %d", len(positions), len(tasks))
+		}
+		for _, task := range tasks {
+			if parentIndex, exists := positions[task.ParentID]; exists && positions[task.ID] >= parentIndex {
+				t.Fatalf("parent %s would be deleted before child %s", task.ParentID, task.ID)
+			}
+		}
+	}
+}
+
+func TestE2EResetDeletionRejectsHierarchyCycleBeforeDeleting(t *testing.T) {
+	ordered, err := orderE2ETasksForDeletion([]*taskmodels.Task{
+		{ID: "a", ParentID: "b"}, {ID: "b", ParentID: "a"},
+	})
+	if err == nil || len(ordered) != 0 {
+		t.Fatalf("cyclic deletion plan = %v, %v; want no deletions and an error", ordered, err)
 	}
 }

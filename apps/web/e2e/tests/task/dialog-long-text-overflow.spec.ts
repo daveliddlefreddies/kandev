@@ -27,8 +27,10 @@ async function assertProfileDropdownFits(trigger: Locator, dropdownLabel: string
     await searchInput.click();
     await expect(searchInput).toBeFocused();
   }
-  await expect(dropdown.getByRole("option").first()).toBeVisible();
-  await trigger.page().keyboard.press("Escape");
+  const option = dropdown.locator('[role="option"]:not([aria-disabled="true"])').first();
+  await expect(option).toBeVisible();
+  await expect(option).toBeEnabled();
+  await option.click();
   await expect(dropdown).not.toBeVisible();
 }
 
