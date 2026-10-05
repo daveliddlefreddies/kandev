@@ -27,7 +27,12 @@ const DEFAULT_STORAGE_SETTINGS: StorageMaintenanceSettings = {
   quarantine_retention_hours: 168,
   workspaces: { enabled: true, dependency_cleanup_enabled: true },
   kandev_containers: { enabled: true },
-  go_cache: { enabled: true, max_bytes: 12 * GIB, adopted_path: "" },
+  go_cache: {
+    enabled: true,
+    max_bytes: 12 * GIB,
+    adopted_path: "",
+    allow_cleanup_while_busy: false,
+  },
   docker: {
     dedicated_daemon_acknowledged: true,
     build_cache_enabled: true,
@@ -331,6 +336,14 @@ function databaseStats(sizeBytes: number, walSizeBytes: number): DatabaseStats {
     backup_directory: "/demo/.kandev/backups",
     size_bytes: sizeBytes,
     wal_size_bytes: walSizeBytes,
+    message_content_bytes: Math.floor(sizeBytes * 0.28),
+    message_metadata_bytes: Math.floor(sizeBytes * 0.12),
+    message_payload_bytes: Math.floor(sizeBytes * 0.4),
+    git_snapshot_bytes: Math.floor(sizeBytes * 0.18),
+    logical_stats_state: "ready",
+    logical_stats_measured_at: NOW,
+    metadata_stale: false,
+    metadata_measured_at: NOW,
     schema_version: "v1.24.0",
     last_backup_at: "2026-07-18T08:15:00.000Z",
   };

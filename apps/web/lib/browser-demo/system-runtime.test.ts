@@ -51,6 +51,18 @@ describe("browser demo settings and system runtime", () => {
       body: { computing: false, home_dir: "/demo/.kandev", data: { warnings: [] } },
     });
     expect(openFolder).toMatchObject({ body: { path: "/demo/.kandev" } });
+    expect(before).toMatchObject({
+      body: {
+        message_content_bytes: expect.any(Number),
+        message_metadata_bytes: expect.any(Number),
+        message_payload_bytes: expect.any(Number),
+        git_snapshot_bytes: expect.any(Number),
+        logical_stats_state: "ready",
+        logical_stats_measured_at: expect.any(String),
+        metadata_stale: false,
+        metadata_measured_at: expect.any(String),
+      },
+    });
     expect(request(runtime, "GET", `/api/v1/system/jobs/${refreshJobId}`)).toMatchObject({
       body: { kind: "disk-walk", state: "succeeded" },
     });
@@ -87,7 +99,7 @@ describe("browser demo storage runtime", () => {
     expect(overview).toMatchObject({
       status: 200,
       body: {
-        settings: { enabled: true },
+        settings: { enabled: true, go_cache: { allow_cleanup_while_busy: false } },
         capabilities: { docker_available: true, go_cache_adoption_available: true },
         summary: {
           workspaces: { candidate_bytes: expect.any(Number) },

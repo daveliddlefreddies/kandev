@@ -2087,7 +2087,6 @@ jobs:
         !inputs.dry_run &&
         !inputs.desktop_validation_only &&
         needs.prepare.result == 'success' &&
-        needs.build-web.result == 'success' &&
         needs.build-remote-helpers.result == 'success' &&
         needs.build-bundles.result == 'success' &&
         needs.build-desktop.result == 'success'
@@ -2623,6 +2622,7 @@ jobs:
         !inputs.dry_run &&
         !inputs.desktop_validation_only &&
         needs.prepare.result == 'success' &&
+        needs.build-web.result == 'success' &&
         needs.build-remote-helpers.result == 'success' &&
         needs.build-bundles.result == 'success' &&
         needs.build-desktop.result == 'success' &&
