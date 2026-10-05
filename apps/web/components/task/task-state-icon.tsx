@@ -226,6 +226,27 @@ function TaskStateIconContent({
       accessibleLabel,
     );
   }
+  return (
+    <TaskSessionStateIcon
+      sessionState={sessionState}
+      state={state}
+      interrupted={interrupted}
+      isOnLastWorkflowStep={isOnLastWorkflowStep}
+      accessibleLabel={accessibleLabel}
+    />
+  );
+}
+
+function TaskSessionStateIcon({
+  sessionState,
+  state,
+  interrupted,
+  isOnLastWorkflowStep,
+  accessibleLabel,
+}: Pick<
+  TaskStateIconProps,
+  "sessionState" | "state" | "interrupted" | "isOnLastWorkflowStep" | "accessibleLabel"
+>) {
   if (sessionState === "IDLE") {
     return <TaskReadyIcon accessibleLabel={accessibleLabel} />;
   }
