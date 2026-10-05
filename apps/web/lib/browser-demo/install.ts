@@ -2,6 +2,7 @@
 
 import type { BootPayload } from "@/src/boot-payload";
 import { resetKanbanPreviewState } from "@/lib/local-storage";
+import { linkToTask } from "@/lib/links";
 import type { DemoHttpResponse, DemoWorkerRequest, DemoWorkerResponse } from "./protocol";
 import { DEMO_STORAGE_KEY } from "./scenario";
 
@@ -149,11 +150,19 @@ export async function installBrowserDemo(): Promise<void> {
       persistedState: localStorage.getItem(DEMO_STORAGE_KEY) ?? undefined,
     })) as BootPayload,
   );
+  history.replaceState({}, "", browserDemoStartPath(payload));
   (window as Window & { __KANDEV_BOOT_PAYLOAD__?: BootPayload }).__KANDEV_BOOT_PAYLOAD__ = payload;
   window.parent?.postMessage(
     { source: "kandev-browser-demo", kind: "ready" },
     window.location.origin,
   );
+}
+
+export function browserDemoStartPath(payload: BootPayload): string {
+  const taskId = "demo-task-audit";
+  const sessions = payload.initialState?.taskSessionsByTask?.itemsByTaskId[taskId];
+  const session = sessions?.find((item) => item.task_id === taskId);
+  return session ? linkToTask(taskId, { sessionId: session.id }) : "/";
 }
 
 export function serializeDemoHttpResponseBody(response: DemoHttpResponse): string | null {
