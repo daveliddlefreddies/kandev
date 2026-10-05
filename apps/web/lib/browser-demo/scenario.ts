@@ -16,7 +16,7 @@ import type { GitHubPR, PRFeedback, TaskPR } from "@/lib/types/github";
 import type { DemoWorkflowRuntimeSnapshot } from "./workflow-runtime";
 
 export const DEMO_STORAGE_KEY = "kandev-browser-demo:v1";
-export const DEMO_SCENARIO_VERSION = 4;
+export const DEMO_SCENARIO_VERSION = 5;
 
 export const DEMO_IDS = {
   workspace: "demo-workspace",
@@ -374,7 +374,7 @@ export function createDemoState(): DemoState {
     makeSession("demo-session-empty", "demo-task-empty", "IDLE"),
     makeSession("demo-session-auth", "demo-task-auth", "IDLE"),
   ];
-  return {
+  const state: DemoState = {
     version: DEMO_SCENARIO_VERSION,
     nextTask: 1,
     tasks,
@@ -866,6 +866,7 @@ export function createDemoState(): DemoState {
             turnId: "audit-review-fix",
             requestsInput: true,
             metadata: {
+              request_id: "audit-migration-request",
               pending_id: "audit-migration-permission",
               tool_call_id: "audit-migration-check",
               action_type: "command",
@@ -1273,6 +1274,14 @@ export function createDemoState(): DemoState {
       "demo-task-audit": [makeTaskPR()],
     },
   };
+  for (const messages of Object.values(state.messagesBySession)) {
+    messages.forEach((message, index) => {
+      const timestamp = new Date(Date.parse(NOW) + index * 20_000).toISOString();
+      message.created_at = timestamp;
+      message.updated_at = timestamp;
+    });
+  }
+  return state;
 }
 
 // i18n-exempt: browser demo fixture data is intentionally literal demo content

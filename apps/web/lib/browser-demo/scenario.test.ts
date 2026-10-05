@@ -11,6 +11,17 @@ import {
 import { createDemoFiles } from "./demo-files";
 
 describe("browser demo scenario", () => {
+  it("keeps the seeded conversation order when the application sorts by timestamp", () => {
+    const state = createDemoState();
+    for (const messages of Object.values(state.messagesBySession)) {
+      const timestamps = messages.map((message) => Date.parse(message.created_at));
+      expect(timestamps.every((timestamp) => Number.isFinite(timestamp))).toBe(true);
+      expect(new Set(timestamps).size).toBe(messages.length);
+      expect([...timestamps].sort((a, b) => a - b)).toEqual(timestamps);
+      expect(messages[0].author_type).toBe("user");
+    }
+  });
+
   it("hydrates a realistic board and GitHub pull request", () => {
     const state = createDemoState();
     const payload = createBootPayload(state);
@@ -166,6 +177,7 @@ describe("browser demo scenario", () => {
     expect(permission).toMatchObject({
       requests_input: true,
       metadata: {
+        request_id: "audit-migration-request",
         pending_id: "audit-migration-permission",
         tool_call_id: "audit-migration-check",
         action_type: "command",

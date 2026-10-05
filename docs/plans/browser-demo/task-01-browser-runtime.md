@@ -78,3 +78,12 @@ The standalone demo build now runs prebuild to generate release data in fresh ch
 Landing PR #169 adds a pinned source fallback and rejects exports without the demo assets.
 The focused worker and installation tests passed 24 tests. Typecheck and focused lint passed.
 Browser verification rendered the demo task board from the production export without a local server.
+The paginated sidebar now uses the application's existing filter, grouping, and ordering evaluator.
+Its responses include full task records for selection and status rendering.
+Conversation subscriptions now acknowledge protocol v2 and publish ordered message changes to their scopes.
+The audit approval fixture includes the request identity required by the current chat controls.
+The scenario version increases so persisted demo sessions use the updated fixture.
+Seeded messages use increasing timestamps so the chat renderer preserves conversation order.
+The final runtime checks passed 54 tests across nine files, typecheck, and focused lint.
+Headless Chrome verified task navigation and a live approval response without a local server.
+Landing checks confirmed that hero links do not overlap the video at six desktop and phone widths.

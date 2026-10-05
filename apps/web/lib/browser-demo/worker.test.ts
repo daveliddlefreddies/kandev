@@ -2,7 +2,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DemoWorkerRequest, DemoWorkerResponse } from "./protocol";
-import { DEMO_IDS } from "./scenario";
+import { createDemoState, DEMO_IDS } from "./scenario";
+import type { SidebarTaskQuery, SidebarTaskPageResponse } from "@/lib/types/http";
 import { handleHttp, handleSocketRequest } from "./worker";
 
 function get(path: string) {
@@ -46,6 +47,56 @@ afterEach(() => {
 });
 
 describe("browser demo sidebar bootstrap", () => {
+  const query: SidebarTaskQuery = {
+    filters: [],
+    sort: { key: "title", direction: "asc" },
+    group: "repository",
+    collapsed_group_keys: [],
+    collapsed_task_ids: [],
+    page: 1,
+    page_size: 100,
+    locale: "en",
+  };
+
+  it("serves complete task rows for the paginated sidebar", async () => {
+    const response = await requestHttp(
+      "POST",
+      `/api/v1/workspaces/${DEMO_IDS.workspace}/sidebar/query`,
+      query,
+    );
+    expect(response.status).toBe(200);
+    const page = response.body as SidebarTaskPageResponse;
+    const entries = page.entries.filter((entry) => entry.kind === "task");
+    expect(page.total_tasks).toBe(createDemoState().tasks.length);
+    expect(entries.map((entry) => entry.task_id).sort()).toEqual(
+      createDemoState()
+        .tasks.map((task) => task.id)
+        .sort(),
+    );
+    expect(entries.every((entry) => entry.task?.id === entry.task_id)).toBe(true);
+    expect(page.entries.some((entry) => entry.kind === "group")).toBe(true);
+  });
+
+  it("filters and pages tasks using the same sidebar evaluator as the application", async () => {
+    const response = await requestHttp(
+      "POST",
+      `/api/v1/workspaces/${DEMO_IDS.workspace}/sidebar/query`,
+      {
+        ...query,
+        filters: [{ dimension: "titleMatch", op: "matches", value: "audit" }],
+        page_size: 1,
+      },
+    );
+    expect(response.body).toMatchObject({
+      total_tasks: 1,
+      page_size: 1,
+      has_next: false,
+      entries: expect.arrayContaining([
+        expect.objectContaining({ kind: "task", task_id: "demo-task-audit" }),
+      ]),
+    });
+  });
+
   it.each([
     ["automation.list", []],
     ["automation.runs.list", []],
@@ -271,11 +322,16 @@ describe("browser demo worker WebSocket runtime", () => {
 
     expect(pending).toMatchObject({
       requests_input: true,
-      metadata: { status: "pending", tool_call_id: "audit-migration-check" },
+      metadata: {
+        status: "pending",
+        request_id: "audit-migration-request",
+        tool_call_id: "audit-migration-check",
+      },
     });
     expect(
       requestSocket("permission.respond", {
         session_id: AUDIT_SESSION_ID,
+        request_id: "audit-migration-request",
         pending_id: "audit-migration-permission",
         option_id: "audit-allow-once",
       }).payload,

@@ -2,7 +2,14 @@
 
 /* eslint-disable complexity, max-lines, max-lines-per-function, sonarjs/cognitive-complexity, sonarjs/no-duplicate-string */
 
-import type { Message, Task, TaskPlan, TaskPlanRevision, TaskSession } from "@/lib/types/http";
+import type {
+  Message,
+  SidebarTaskQuery,
+  Task,
+  TaskPlan,
+  TaskPlanRevision,
+  TaskSession,
+} from "@/lib/types/http";
 import type { UtilityAgent } from "@/lib/api/domains/utility-api";
 import type { JiraConfig } from "@/lib/types/jira";
 import type { LinearConfig, LinearTeam } from "@/lib/types/linear";
@@ -46,6 +53,8 @@ import { createDemoFiles } from "./demo-files";
 import { createDemoMultiRepoFiles } from "./demo-multi-repo-files";
 import { createDemoSystemRuntime } from "./system-runtime";
 import { createDemoWorkflowRuntime } from "./workflow-runtime";
+import { createDemoSidebarPage } from "./sidebar-runtime";
+import { createDemoConversationRuntime } from "./conversation-runtime";
 
 const scope: DedicatedWorkerGlobalScope = self as never;
 let state = createDemoState();
@@ -60,6 +69,7 @@ const fileReviewsBySession = new Map<
 >();
 const socketUrls = new Map<string, string>();
 const terminalInputBySocket = new Map<string, string>();
+const conversationRuntime = createDemoConversationRuntime(socketMessage);
 
 const DEMO_ENVIRONMENT_ID = "demo-environment";
 const DEMO_TERMINAL_ID = "demo-terminal-1";
@@ -178,6 +188,7 @@ scope.onmessage = (event: MessageEvent<DemoWorkerRequest>) => {
     systemRuntime = createDemoSystemRuntime();
     workflowRuntime = makeWorkflowRuntime();
     fileReviewsBySession.clear();
+    conversationRuntime.reset();
     post({ kind: "result", id: message.id, value: createBootPayload(state) });
     return;
   }
@@ -197,6 +208,7 @@ scope.onmessage = (event: MessageEvent<DemoWorkerRequest>) => {
   }
   if (message.kind === "ws-close") {
     socketUrls.delete(message.socketId);
+    conversationRuntime.close(message.socketId);
     terminalInputBySocket.delete(message.socketId);
     post({ kind: "ws-event", socketId: message.socketId, event: "close" });
     return;
@@ -297,6 +309,9 @@ export async function handleHttp(request: DemoHttpRequest): Promise<DemoHttpResp
     });
   if (path === `/api/v1/workspaces/${DEMO_IDS.workspace}/tasks`)
     return json({ tasks: activeTasks(), total: activeTasks().length });
+  if (path === `/api/v1/workspaces/${DEMO_IDS.workspace}/sidebar/query` && method === "POST") {
+    return json(createDemoSidebarPage(state, input as SidebarTaskQuery));
+  }
   const statsMatch = path.match(
     new RegExp(`^/api/v1/workspaces/${DEMO_IDS.workspace}/stats/([^/]+)$`),
   );
@@ -462,6 +477,12 @@ export function handleSocketRequest(socketId: string, raw: string) {
   const action = request.action ?? "";
   const payload = request.payload ?? {};
   if (!id) return;
+
+  const conversationResponse = conversationRuntime.route(socketId, action, payload);
+  if (conversationResponse) {
+    respond(socketId, id, conversationResponse);
+    return;
+  }
 
   if (
     action === "automation.list" ||
@@ -1482,6 +1503,7 @@ function respond(socketId: string, id: string, payload: unknown, error = false) 
 }
 
 function notify(action: string, payload: unknown) {
+  conversationRuntime.publish(action, payload);
   const message = {
     type: "notification",
     action,
