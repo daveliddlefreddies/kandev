@@ -13,6 +13,12 @@ async function scrollChangesPanelToBottom(session: SessionPage): Promise<void> {
   });
 }
 
+async function scrollChangesPanelToTop(session: SessionPage): Promise<void> {
+  await session.changes.getByTestId("changes-panel-scroll-owner").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+}
+
 test.describe("PR switcher changes panel", () => {
   /**
    * Verifies that the changes panel shows the correct PR files and commits
@@ -225,10 +231,11 @@ test.describe("PR switcher changes panel", () => {
     await expect(session.prFilesSection()).toBeVisible({ timeout: 15_000 });
     await session.expandPRChangesSection();
     await session.expandCommitsSection();
-    await scrollChangesPanelToBottom(session);
+    await scrollChangesPanelToTop(session);
     await expect(session.prFilesSection().getByText("auth.go")).toBeVisible();
     await expect(session.prFilesSection().getByText("auth_test.go")).toBeVisible();
 
+    await scrollChangesPanelToBottom(session);
     await expect(session.commitsSection()).toBeVisible();
     await expect(session.commitsSection().getByText("fix auth token expiry")).toBeVisible();
     const authCommitRow = session
@@ -260,7 +267,7 @@ test.describe("PR switcher changes panel", () => {
     await expect(session.prFilesSection()).toBeVisible({ timeout: 15_000 });
     await session.expandPRChangesSection();
     await session.expandCommitsSection();
-    await scrollChangesPanelToBottom(session);
+    await scrollChangesPanelToTop(session);
     await expect(session.prFilesSection().getByText("dashboard.tsx")).toBeVisible();
     await expect(session.prFilesSection().getByText("api.ts")).toBeVisible();
     await expect(session.prFilesSection().getByText("styles.css")).toBeVisible();
@@ -268,6 +275,7 @@ test.describe("PR switcher changes panel", () => {
     // Verify Task A files are NOT visible
     await expect(session.prFilesSection().getByText("auth.go")).not.toBeVisible();
 
+    await scrollChangesPanelToBottom(session);
     await expect(session.commitsSection()).toBeVisible();
     await expect(session.commitsSection().getByText("add dashboard component")).toBeVisible();
     await expect(session.commitsSection().getByText("add api client")).toBeVisible();
@@ -313,9 +321,10 @@ test.describe("PR switcher changes panel", () => {
     await expect(session.prFilesSection()).toBeVisible({ timeout: 15_000 });
     await session.expandPRChangesSection();
     await session.expandCommitsSection();
-    await scrollChangesPanelToBottom(session);
+    await scrollChangesPanelToTop(session);
     await expect(session.prFilesSection().getByText("auth.go")).toBeVisible();
     await expect(session.prFilesSection().getByText("auth_test.go")).toBeVisible();
+    await scrollChangesPanelToBottom(session);
     await expect(session.commitsSection().getByText("fix auth token expiry")).toBeVisible();
     await expect(authCommitRow.getByTestId("commit-provenance")).toHaveAttribute(
       "data-commit-provenance",
