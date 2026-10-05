@@ -1,5 +1,5 @@
 import { test, expect } from "../../fixtures/test-base";
-import { WorkflowSettingsPage } from "../../pages/workflow-settings-page";
+import { WorkflowSettingsPage, openStepSection } from "../../pages/workflow-settings-page";
 
 test.describe("Workflow settings on mobile", () => {
   test("keeps the workflow reorder handle inside the card with a touch-sized target", async ({
@@ -119,6 +119,7 @@ test.describe("Workflow settings on mobile", () => {
 
     const agentProfileHelpId = `${workStep.id}-agent-profile-help`;
     const originalSessionHelpId = `${workStep.id}-override-original-session-help`;
+    await openStepSection(card, "advanced", true);
     const helpOrder = await card
       .locator(`[data-testid="${agentProfileHelpId}"], [data-testid="${originalSessionHelpId}"]`)
       .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-testid")));
@@ -186,7 +187,7 @@ test.describe("Workflow settings on mobile", () => {
     await expect(card).toBeVisible();
     await page.stepNodeByName(card, "Waiting").click();
     const panel = card.getByTestId(`workflow-step-panel-${waitStep.id}`);
-    await panel.getByTestId("workflow-editor-tab-automation").tap();
+    await openStepSection(panel, "automation", true);
 
     await page.addEditorAction("on_children_completed", "move_to_next", true);
     await page.backFromEditorAction(true);
@@ -216,7 +217,7 @@ test.describe("Workflow settings on mobile", () => {
     const editorControls = [
       card.getByPlaceholder("Step name"),
       childCompletionAction,
-      panel.getByTestId("workflow-editor-tab-automation"),
+      panel.getByTestId("workflow-section-toggle-automation"),
     ];
     for (const control of editorControls) {
       const box = await control.boundingBox();
@@ -328,7 +329,7 @@ test.describe("Workflow settings on mobile", () => {
     await page.goto(seedData.workspaceId);
     const card = await page.findWorkflowCard("Mobile WIP Guidance");
     const panel = await page.selectStep(card, "Review", true);
-    await panel.getByTestId("workflow-editor-tab-policies").tap();
+    await openStepSection(panel, "board", true);
 
     const guidanceHelp = card.getByTestId(`${reviewStep.id}-pull-from-guidance-help`);
     await expect(guidanceHelp).toBeVisible();

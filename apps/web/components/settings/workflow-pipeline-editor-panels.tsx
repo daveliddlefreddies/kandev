@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import type { WorkflowStep } from "@/lib/types/http";
 import { useResponsiveBreakpoint } from "@/hooks/use-responsive-breakpoint";
-import { WorkflowInspector, type WorkflowInspectorTab } from "./workflow-editor/inspector";
+import { WorkflowInspector } from "./workflow-editor/inspector";
 import { isWorkflowStepDirty } from "./workflow-dirty-state";
 
 type StepConfigPanelProps = {
@@ -27,7 +26,6 @@ export function StepConfigPanel({
   readOnly = false,
   onSessionConfigResolutionPendingChange,
 }: StepConfigPanelProps) {
-  const [activeTab, setActiveTab] = useState<WorkflowInspectorTab>("agent");
   const { isMobile } = useResponsiveBreakpoint();
   const sourceTarget = step.session_target?.kind === "step" ? step.session_target : undefined;
 
@@ -42,9 +40,7 @@ export function StepConfigPanel({
         step={step}
         savedStep={savedStep}
         steps={steps}
-        activeTab={activeTab}
         readOnly={readOnly}
-        onTabChange={setActiveTab}
         onUpdate={onUpdate}
         onRemove={onRemove}
         onRestoreSource={

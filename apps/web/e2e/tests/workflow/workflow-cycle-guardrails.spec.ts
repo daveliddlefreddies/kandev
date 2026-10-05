@@ -1,5 +1,5 @@
 import { test, expect } from "../../fixtures/test-base";
-import { WorkflowSettingsPage } from "../../pages/workflow-settings-page";
+import { WorkflowSettingsPage, openStepSection } from "../../pages/workflow-settings-page";
 
 const WARNING_WORKFLOW_NAME = "Guardrail warning workflow";
 
@@ -92,13 +92,13 @@ test.describe("Workflow cycle guardrails", () => {
     await settings.goto(seedData.workspaceId);
     await settings.createWorkflow("Blocked automatic draft", "Custom");
     await settings.selectEditorStep("Todo");
-    await testPage.getByTestId("workflow-editor-tab-automation").click();
+    await openStepSection(testPage, "automation", false);
     await settings.addEditorAction("on_enter", "auto_start_agent");
     await settings.backFromEditorAction();
     await settings.addEditorAction("on_turn_complete", "move_to_next");
     await settings.backFromEditorAction();
     await settings.selectEditorStep("In Progress");
-    await testPage.getByTestId("workflow-editor-tab-automation").click();
+    await openStepSection(testPage, "automation", false);
     await settings.addEditorAction("on_enter", "auto_start_agent");
     await settings.backFromEditorAction();
     await settings.addEditorAction("on_turn_complete", "move_to_previous");
@@ -125,11 +125,11 @@ test.describe("Workflow cycle guardrails", () => {
     await settings.goto(seedData.workspaceId);
     await settings.createWorkflow(workflowName, "Custom");
     await settings.selectEditorStep("Todo");
-    await testPage.getByTestId("workflow-editor-tab-automation").click();
+    await openStepSection(testPage, "automation", false);
     await settings.addEditorAction("on_turn_complete", "move_to_next");
     await settings.backFromEditorAction();
     await settings.selectEditorStep("In Progress");
-    await testPage.getByTestId("workflow-editor-tab-automation").click();
+    await openStepSection(testPage, "automation", false);
     await settings.addEditorAction("on_turn_complete", "move_to_previous");
     await settings.backFromEditorAction();
     await settings.submitSaveChanges();

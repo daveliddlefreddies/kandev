@@ -1,6 +1,6 @@
 import { test, expect } from "../../fixtures/test-base";
 import { settledBoundingBox } from "../../helpers/settled-box";
-import { WorkflowSettingsPage } from "../../pages/workflow-settings-page";
+import { WorkflowSettingsPage, openStepSection } from "../../pages/workflow-settings-page";
 
 test.describe("Workflow cycle guardrails on mobile", () => {
   test("keeps a blocking cycle readable above the dialog action", async ({
@@ -12,14 +12,14 @@ test.describe("Workflow cycle guardrails on mobile", () => {
     await settings.createWorkflow("Mobile blocked draft", "Custom", true);
 
     await settings.selectEditorStep("Todo", true);
-    await testPage.getByTestId("workflow-editor-tab-automation").tap();
+    await openStepSection(testPage, "automation", true);
     await settings.addEditorAction("on_enter", "auto_start_agent", true);
     await settings.backFromEditorAction(true);
     await settings.addEditorAction("on_turn_complete", "move_to_next", true);
     await settings.backFromEditorAction(true);
     await settings.backToEditorJourney();
     await settings.selectEditorStep("In Progress", true);
-    await testPage.getByTestId("workflow-editor-tab-automation").tap();
+    await openStepSection(testPage, "automation", true);
     await settings.addEditorAction("on_enter", "auto_start_agent", true);
     await settings.backFromEditorAction(true);
     await settings.addEditorAction("on_turn_complete", "move_to_previous", true);
@@ -68,14 +68,14 @@ test.describe("Workflow cycle guardrails on mobile", () => {
     await settings.createWorkflow(workflowName, "Custom", true);
 
     await settings.selectEditorStep("Todo", true);
-    await testPage.getByTestId("workflow-editor-tab-automation").tap();
+    await openStepSection(testPage, "automation", true);
     await settings.addEditorAction("on_enter", "auto_start_agent", true);
     await settings.backFromEditorAction(true);
     await settings.addEditorAction("on_turn_complete", "move_to_next", true);
     await settings.backFromEditorAction(true);
     await settings.backToEditorJourney();
     await settings.selectEditorStep("In Progress", true);
-    await testPage.getByTestId("workflow-editor-tab-automation").tap();
+    await openStepSection(testPage, "automation", true);
     await settings.addEditorAction("on_turn_complete", "move_to_previous", true);
     await settings.backFromEditorAction(true);
     await settings.submitSaveChanges(true);

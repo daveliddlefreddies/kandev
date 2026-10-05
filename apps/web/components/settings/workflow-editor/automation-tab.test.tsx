@@ -92,7 +92,7 @@ describe("AutomationTab", () => {
     expect(screen.getByLabelText("Command").getAttribute("aria-invalid")).toBeNull();
   });
 
-  it("replaces the action list with a focused editor and provides a way back", () => {
+  it("expands an action editor inline and keeps the event outline available", () => {
     render(
       <AutomationTab
         step={step}
@@ -104,9 +104,9 @@ describe("AutomationTab", () => {
     );
 
     expect(screen.getByTestId("workflow-focused-action-editor")).toBeTruthy();
-    expect(screen.queryByTestId(enterActionList)).toBeNull();
+    expect(screen.getByTestId(enterActionList)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to automation" }));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse" }));
 
     expect(screen.getByTestId(enterActionList)).toBeTruthy();
   });

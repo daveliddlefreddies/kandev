@@ -2,7 +2,7 @@
 status: draft
 system: tasks
 created: 2026-09-05
-updated: 2026-09-06
+updated: 2026-10-05
 owners:
   - Kandev
 ---
@@ -17,8 +17,8 @@ must not consume an LLM turn. Its command, live output, final status, and exit
 code must remain visible in the bound agent session's chat history.
 
 This capability adds `run_script` to step entry, turn completion, and step exit.
-It also improves the existing inline workflow step editor with compact tabs and
-focused action editing, without introducing a second workflow-editing layout.
+It also improves the existing inline workflow step editor with expandable summary sections and
+inline action editing, without introducing a second workflow-editing layout.
 It does not replace repository setup and cleanup scripts.
 
 ## Requirements
@@ -237,12 +237,13 @@ its familiar workflow card, step strip, and inline editing model.
   the selected step. Selecting another step shall replace the panel contents
   without expanding every step or introducing a freeform graph canvas. The
   selected-step heading shall retain editable step name and color controls.
-- **AC-TASKS-WORKFLOW-STEP-SCRIPT-008.3:** The selected-step panel shall contain
-  compact **Agent**, **Automation**, and **Policies** tabs near its header.
-  Desktop tabs shall use a small segmented-control treatment rather than three
-  large full-width buttons. Selecting an action shall replace the Automation
-  tab's action list with one focused editor and an explicit way back.
-- **AC-TASKS-WORKFLOW-STEP-SCRIPT-008.4:** The Automation tab shall preserve
+- **AC-TASKS-WORKFLOW-STEP-SCRIPT-008.3:** The selected-step panel shall show
+  independently expandable Agent, Instructions, Automation, Board behavior,
+  and Advanced sections. Collapsed sections shall show live summaries of their
+  current draft configuration. Several sections can remain open together.
+  Selecting an action shall expand its editor inline without replacing the
+  event outline. Closing a section shall retain all unsaved edits.
+- **AC-TASKS-WORKFLOW-STEP-SCRIPT-008.4:** The Automation section shall preserve
   every existing event editor, including task entry, turn start, turn complete,
   child-task completion, and task exit, as compact ordered action groups. Its
   add-action palette shall show only action types supported by the selected
@@ -250,17 +251,17 @@ its familiar workflow card, step strip, and inline editing model.
   `run_script` action shall remain limited to entry, turn completion, and exit.
 - **AC-TASKS-WORKFLOW-STEP-SCRIPT-008.5:** Workflow-level configuration checks
   shall identify invalid or incomplete steps. Selecting an issue shall select
-  the exact step and open the tab, action, or field that can resolve it within
+  the exact step and open the section, action, or field that can resolve it within
   the same workflow card.
 - **AC-TASKS-WORKFLOW-STEP-SCRIPT-008.6:** The redesign shall preserve the
-  settings manual-save contract. Workflow, tab, step, and action selection
+  settings manual-save contract. Workflow, section, step, and action selection
   shall retain the existing page-local drafts; the shared Save changes surface
   shall save every dirty workflow on the page; and leaving with dirty changes
   shall use the existing save, discard, or continue-editing confirmation.
 - **AC-TASKS-WORKFLOW-STEP-SCRIPT-008.7:** On phone viewports, the workflow card,
   compact step strip, and inline selected-step panel shall retain the same
   information hierarchy. The step strip may scroll inside its own horizontal
-  region, while tab content stacks below it without a dedicated journey,
+  region, while section content stacks below it without a dedicated journey,
   full-height step route, or nested editor navigation.
 - **AC-TASKS-WORKFLOW-STEP-SCRIPT-008.8:** Mobile shall provide the same
   authoring capabilities as desktop, use explicit move up/down actions where
@@ -298,8 +299,7 @@ its familiar workflow card, step strip, and inline editing model.
   never starts the command again.
 - **GIVEN** a workflow with several steps and actions, **WHEN** an author edits
   it on desktop, **THEN** its existing compact step strip remains visible while
-  the inline selected-step panel changes between Agent, Automation, and
-  Policies.
+  the inline selected-step panel shows summaries that expand independently.
 - **GIVEN** an invalid action in a non-selected step, **WHEN** an author selects
   its configuration issue, **THEN** the editor selects that step and opens the
   action field that caused the issue.
@@ -307,7 +307,7 @@ its familiar workflow card, step strip, and inline editing model.
   returns, **THEN** the unsaved command remains in the page-local workflow draft
   and no persistence request occurs until Save changes is selected.
 - **GIVEN** the same workflow on a phone, **WHEN** an author selects a step and
-  edits an action, **THEN** the edit stays inside that workflow card, the tabs
+  edits an action, **THEN** the edit stays inside that workflow card, the section rows
   remain touch-safe, and the page does not gain horizontal overflow.
 
 ## Out of scope

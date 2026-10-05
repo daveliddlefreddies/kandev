@@ -15,14 +15,14 @@ system_design:
 legacy_specs: []
 ---
 
-# Implementation Plan: Workflow Step Scripts and Inline Step Tabs
+# Implementation Plan: Workflow Step Scripts and Summary Sections
 
 ## Overview
 
 Add `run_script` actions to step entry, agent completion, and step exit. Execute
 them in the trigger-owning agent session, stream durable command output into
 chat, and apply explicit timeout and failure policies. Improve the existing
-workflow card by placing compact Agent, Automation, and Policies tabs inside its
+workflow card by adding independently expandable summary sections inside its
 inline selected-step panel. The current step strip, page-level workflow editing,
 manual save, and mobile information hierarchy remain intact.
 
@@ -36,10 +36,10 @@ manual save, and mobile information hierarchy remain intact.
   and exit, including profile reuse, parking, and replacement.
 - Durable at-most-once run state, agentctl workspace execution, output
   streaming, failure policy, recovery, logs, and metrics.
-- Compact Agent/Automation/Policies tabs inside the existing inline selected-step
-  editor, focused action editors, and actionable configuration checks.
+- Agent, Instructions, Automation, Board behavior, and Advanced summary sections
+  inside the existing inline selected-step editor, inline action editors, and actionable configuration checks.
 - The existing mobile workflow card with a bounded horizontal step strip,
-  touch-safe tabs, explicit move controls, and no document-level overflow.
+  touch-safe summary rows, explicit move controls, and no document-level overflow.
 - Existing manual-save, read-only, import/export, sync, inheritance, and
   transition semantics.
 - Script execution rendering in normal agent chat, E2E coverage, localization,
@@ -82,8 +82,7 @@ manual save, and mobile information hierarchy remain intact.
    selection repair, and resolvable diagnostics without changing the wire shape.
 6. Retain `WorkspaceWorkflowsClient`, `WorkflowCard`,
    `WorkflowPipelineEditor`, and the inline selected-step panel. Integrate the
-   shared action catalog and view model there, then add a compact segmented tab
-   control without adding workflow-editor routes or route selection state.
+   shared action catalog and view model there, then add independent summary disclosures without adding workflow-editor routes or route selection state.
 7. Keep each workflow card's existing `SettingsSaveProvider` contributor,
    client-only identity remapping, destructive confirmations, and dirty
    navigation ownership. Multiple dirty workflows continue to save together.
@@ -121,17 +120,17 @@ manual save, and mobile information hierarchy remain intact.
 - `AC-TASKS-WORKFLOW-STEP-SCRIPT-008.1` through `.10`:
   `workflow-editor-view-model.test.ts`, workflow-card and inline step-panel
   component tests, and settings save contributor tests cover selection repair,
-  compact tabs, issue targets, multiple dirty workflows, and responsive
+  expandable summaries, issue targets, multiple dirty workflows, and responsive
   composition.
 
 ## E2E tests
 
 - `workflow-settings.spec.ts` (`AC-TASKS-WORKFLOW-STEP-SCRIPT-008.1` through
-  `.6`, `.9`): desktop authors a script through compact tabs in the existing
+  `.6`, `.9`): desktop authors a script through summary sections in the existing
   inline step editor, changes steps without losing the draft, saves once, and
   retains all workflow-level fields.
 - `workflow-settings.spec.ts` (`AC-TASKS-WORKFLOW-STEP-SCRIPT-008.4`, `.5`):
-  configuration checks select the correct inline step, tab, and invalid action;
+  configuration checks select the correct inline step, section, and invalid action;
   transitions changed in the recipe update the existing step strip immediately.
 - `workflow-step-script-profile-switch.spec.ts`
   (`AC-TASKS-WORKFLOW-STEP-SCRIPT-002.2` through `.4`): completion/exit output
@@ -147,7 +146,7 @@ manual save, and mobile information hierarchy remain intact.
 - `mobile-workflow-cycle-guardrails.spec.ts` and a focused inline-authoring case
   in the `mobile-chrome` project
   (`AC-TASKS-WORKFLOW-STEP-SCRIPT-006.4`,
-  `AC-TASKS-WORKFLOW-STEP-SCRIPT-008.7`, `.8`): selects a step and tab in the
+  `AC-TASKS-WORKFLOW-STEP-SCRIPT-008.7`, `.8`): selects a step and section in the
   existing workflow card, authors and reorders scripts, saves, inspects output,
   meets 44-pixel targets, and has no document-level horizontal overflow.
 - `workflow-settings.spec.ts` (`AC-TASKS-WORKFLOW-STEP-SCRIPT-006.3`,
@@ -175,7 +174,7 @@ Tasks 01 through 10 record the first implementation pass. The review and design
 revision add Tasks 11 through 13. Tasks 11 and 12 can proceed independently;
 Task 13 follows both and owns final integration evidence.
 
-## Verification results
+## Earlier verification results
 
 - Backend race-enabled workflow-script/profile-switch tests pass (27 tests),
   and the affected orchestrator, engine, task-model, and SQLite repository
@@ -192,6 +191,92 @@ Task 13 follows both and owns final integration evidence.
 - Specification lint, public documentation validation, work-order audits, and
   `git diff --check` pass for the revised package.
 
+## Approved summary-section revision
+
+The user selected summary rows with inline expansion on 2026-10-05 and
+authorized rebase, implementation, and push to the existing PR. The selected-step
+panel uses five independent disclosures and keeps event actions visible during
+inline editing. Tasks 12 and 13 record the preceding tabbed implementation.
+
+- [x] [Task 14: Build expandable step summary sections](task-14-build-step-summary-sections.md)
+
+Current revision results are recorded in Task 14: 17 focused unit tests and
+44 desktop/phone browser tests passed with retries disabled. Typecheck, lint,
+localization, documentation validation, and documentation coverage preflight
+passed. The primary session owns the normal commit and exact leased push.
+
+## ASCII UI preview
+
+### Desktop: independent step sections
+
+```text
+[ Backlog ] --> [ In progress ] --> [ Review ] --> [ Done ] [+]
+
++-----------------------------------------------------------------------+
+| [In progress________________] [Blue v]                         Delete  |
+|-----------------------------------------------------------------------|
+| > Agent           Task default | Auto-start agent                      |
+| > Instructions    Implement the requested change                       |
+| v Automation      3 actions | On completion: Review                     |
+|   v On task entry                                          2 actions   |
+|     [1. Run script: pnpm install]                                      |
+|       Command  [pnpm install______________________________________]    |
+|       Timeout  [300]   Failure [Block v]    Move up / down / Remove     |
+|       Collapse                                                        |
+|     [2. Auto-start agent]                                             |
+|     [+ Add action v]                                                  |
+|   > On turn start                                          0 actions   |
+|   v On turn complete                                       1 action    |
+|     [1. Move to step: Review]                                         |
+|   > When child tasks complete                              0 actions   |
+|   > On task exit                                           0 actions   |
+| > Board behavior  Manual moves | Command panel | No WIP limit           |
+| > Advanced        Default settings                                     |
++-----------------------------------------------------------------------+
+```
+
+Rows display current draft values, not saved values. Sections are independent;
+opening one does not close another. Action editing leaves the event outline
+visible. Collapsed Advanced content retains session-option resolution ownership.
+
+### Phone: inline sections and touch-safe controls
+
+```text
+[In progress] --> [Review] --> ...     (bounded horizontal strip)
++-----------------------------------+
+| [In progress________] [Blue v]     |
+| > Agent                           |
+|   Task default | Auto-start agent  |
+| > Instructions                    |
+|   Implement the requested change   |
+| v Automation                      |
+|   3 actions | Completion: Review   |
+|   v On task entry        2 actions |
+|     [1. Run script]                |
+|     Command                        |
+|     [pnpm install______________]   |
+|     Timeout [300]                  |
+|     Failure [Block v]              |
+|     [Up] [Down] [Remove]           |
+|     [Collapse]                     |
+|     [2. Auto-start agent]          |
+|     [+ Add action] (bottom sheet)  |
+|   > On turn start        0 actions |
+|   > On turn complete     1 action  |
+|   > Child tasks complete 0 actions |
+|   > On task exit         0 actions |
+| > Board behavior                  |
+|   Manual moves | No WIP limit      |
+| > Advanced                        |
+|   Default settings                |
++-----------------------------------+
+                 [Cancel] [Save]
+```
+
+Phone summary labels stack above their values. Row targets are at least 44px;
+the form stays within the viewport. The existing page-level save coordinator
+persists edits from open and closed sections together.
+
 ## Risks
 
 - The entry boundary commits before its session-bound actions, so `block`
@@ -200,7 +285,7 @@ Task 13 follows both and owns final integration evidence.
   duplicate non-idempotent command.
 - Refactoring every existing action into one catalog can accidentally change
   serialization or ordering; characterization tests must precede the UI move.
-- Reintegrating tabs can duplicate legacy transition controls unless the inline
+- Reorganizing sections can duplicate legacy transition controls unless the inline
   panel has one clear owner for each setting.
 - An action identity derived from array position changes during reordering;
   selection must be repaired deterministically without changing persisted data.

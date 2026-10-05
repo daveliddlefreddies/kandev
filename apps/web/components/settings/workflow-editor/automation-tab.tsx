@@ -23,8 +23,8 @@ const AUTOMATION_TRIGGERS: readonly WorkflowLifecycleTrigger[] = [
   "on_enter",
   "on_turn_start",
   "on_turn_complete",
-  "on_exit",
   "on_children_completed",
+  "on_exit",
 ];
 
 export type WorkflowActionSelection = {
@@ -110,24 +110,6 @@ export function AutomationTab({
 
   const clearSelection = () => selectAction(null, "replace");
 
-  if (selection && selectedActions[selection.index]) {
-    const action = selectedActions[selection.index];
-    return (
-      <FocusedActionEditor
-        action={action}
-        actionIndex={selection.index}
-        actionCount={selectedActions.length}
-        trigger={selection.trigger}
-        steps={steps}
-        readOnly={readOnly}
-        onBack={clearSelection}
-        onChange={(updates) => handleChange(selection.trigger, selection.index, updates)}
-        onMove={(direction) => handleMove(selection.trigger, selection.index, direction)}
-        onRemove={() => handleRemove(selection.trigger, selection.index)}
-      />
-    );
-  }
-
   return (
     <div className="space-y-4" data-testid="workflow-automation-tab">
       {AUTOMATION_TRIGGERS.map((trigger) => {
@@ -137,11 +119,29 @@ export function AutomationTab({
             key={trigger}
             trigger={trigger}
             actions={actions}
+            step={step}
+            steps={steps}
+            selectedIndex={selection?.trigger === trigger ? selection.index : undefined}
             readOnly={readOnly}
             onSelect={(index) => selectAction({ trigger, index })}
             onAdd={(type) => handleAdd(trigger, type)}
             mobile={mobile}
-          />
+          >
+            {selection?.trigger === trigger && actions[selection.index] && (
+              <FocusedActionEditor
+                action={actions[selection.index]}
+                actionIndex={selection.index}
+                actionCount={actions.length}
+                trigger={trigger}
+                steps={steps}
+                readOnly={readOnly}
+                onBack={clearSelection}
+                onChange={(updates) => handleChange(trigger, selection.index, updates)}
+                onMove={(direction) => handleMove(trigger, selection.index, direction)}
+                onRemove={() => handleRemove(trigger, selection.index)}
+              />
+            )}
+          </WorkflowActionList>
         );
       })}
       {selection && selectedActions[selection.index] && (
@@ -183,13 +183,8 @@ function FocusedActionEditor({
   const { t } = useTranslation();
   return (
     <div className="space-y-4" data-testid="workflow-focused-action-editor">
-      <Button
-        type="button"
-        variant="ghost"
-        className="min-h-11 cursor-pointer px-2"
-        onClick={onBack}
-      >
-        {t("workflows:backToAutomation")}
+      <Button type="button" variant="ghost" className="cursor-pointer px-2" onClick={onBack}>
+        {t("workflows:collapseAction")}
       </Button>
       <WorkflowActionEditor
         action={action}

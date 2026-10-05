@@ -2,7 +2,7 @@ import { test, expect } from "../../fixtures/test-base";
 import { assertNoDocumentHorizontalOverflow } from "../../helpers/layout-assertions";
 import { waitForSessionDone } from "../../helpers/session";
 import { SessionPage } from "../../pages/session-page";
-import { WorkflowSettingsPage } from "../../pages/workflow-settings-page";
+import { WorkflowSettingsPage, openStepSection } from "../../pages/workflow-settings-page";
 
 test.describe("Workflow task completion", () => {
   test("shows completion only on the final step and preserves it through edit flows", async ({
@@ -31,12 +31,12 @@ test.describe("Workflow task completion", () => {
     await expect(card).toBeVisible();
 
     const reviewPanel = await settings.selectStep(card, "Review");
-    await reviewPanel.getByTestId("workflow-editor-tab-policies").click();
+    await openStepSection(reviewPanel, "advanced", false);
     await expect(settings.completeTaskOnEnterCheckbox(card, middle.id)).toHaveCount(0);
     await expect(settings.completeTaskOnEnterHelp(card, middle.id)).toHaveCount(0);
 
     const donePanel = await settings.selectStep(card, "Done");
-    await donePanel.getByTestId("workflow-editor-tab-policies").click();
+    await openStepSection(donePanel, "advanced", false);
     const checkbox = settings.completeTaskOnEnterCheckbox(card, done.id);
     const help = settings.completeTaskOnEnterHelp(card, done.id);
     await expect(checkbox).toBeChecked();
@@ -64,18 +64,18 @@ test.describe("Workflow task completion", () => {
     await settings.goto(seedData.workspaceId);
     const reloadedCard = await settings.findWorkflowCard(workflow.name, { waitForName: true });
     const reloadedDonePanel = await settings.selectStep(reloadedCard, "Done");
-    await reloadedDonePanel.getByTestId("workflow-editor-tab-policies").click();
+    await openStepSection(reloadedDonePanel, "advanced", false);
     await expect(settings.completeTaskOnEnterCheckbox(reloadedCard, done.id)).not.toBeChecked();
 
     // Move the saved step away from the end and back. Its persisted value stays
     // attached to the step, while the control follows final position.
     await settings.reorderStep(reloadedCard, "Done", "Review");
     const movedDonePanel = await settings.selectStep(reloadedCard, "Done");
-    await movedDonePanel.getByTestId("workflow-editor-tab-policies").click();
+    await openStepSection(movedDonePanel, "advanced", false);
     await expect(settings.completeTaskOnEnterCheckbox(reloadedCard, done.id)).toHaveCount(0);
     await settings.reorderStep(reloadedCard, "Done", "Review");
     const restoredDonePanel = await settings.selectStep(reloadedCard, "Done");
-    await restoredDonePanel.getByTestId("workflow-editor-tab-policies").click();
+    await openStepSection(restoredDonePanel, "advanced", false);
     await expect(settings.completeTaskOnEnterCheckbox(reloadedCard, done.id)).toBeVisible();
     await expect(settings.completeTaskOnEnterCheckbox(reloadedCard, done.id)).not.toBeChecked();
     if (await settings.floatingSave.isVisible().catch(() => false)) {

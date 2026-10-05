@@ -1,7 +1,7 @@
 import type { Locator } from "@playwright/test";
 import { test, expect } from "../../fixtures/test-base";
 import { promptEditorText } from "../../helpers/settings-prompt-editor";
-import { WorkflowSettingsPage } from "../../pages/workflow-settings-page";
+import { WorkflowSettingsPage, openStepSection } from "../../pages/workflow-settings-page";
 import { dwell } from "../../helpers/causal-waits";
 
 async function maxRingSpread(locator: Locator): Promise<number> {
@@ -59,7 +59,7 @@ test.describe("Workflow settings", () => {
     await page.goto(seedData.workspaceId);
     const card = await page.findWorkflowCard("Turn Complete Layout");
     const panel = await page.selectStep(card, "Working");
-    await panel.getByTestId("workflow-editor-tab-policies").click();
+    await openStepSection(panel, "advanced", false);
     const signalRow = panel.getByTestId(`${working.id}-require-signal-row`);
     const cancelRow = panel.getByTestId(`${working.id}-cancel-completion-row`);
     const label = panel.getByTestId(`${working.id}-cancel-completion-label`);
@@ -141,6 +141,7 @@ test.describe("Workflow settings", () => {
       .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-testid")));
     expect(helpOrder).toEqual([agentProfileHelpId, originalSessionHelpId]);
 
+    await openStepSection(card, "advanced");
     await card.getByLabel("Override original session options").click();
     const editor = card.getByTestId(`${workStep.id}-session-config-editor`);
     await expect(editor.getByTestId("session-config-rule-0")).toBeVisible();
@@ -293,8 +294,9 @@ test.describe("Workflow settings", () => {
     await expect(card).toBeVisible();
     await page.stepNodeByName(card, "Waiting for Children").click();
     const panel = card.getByTestId(`workflow-step-panel-${waitStep.id}`);
-    await panel.getByTestId("workflow-editor-tab-automation").click();
+    await openStepSection(panel, "automation", false);
     const childActions = panel.getByTestId("workflow-action-list-on_children_completed");
+    await childActions.getByTestId("workflow-event-toggle-on_children_completed").click();
 
     await childActions
       .getByText("When every active direct child task is COMPLETED, FAILED, or CANCELLED")
@@ -335,7 +337,7 @@ test.describe("Workflow settings", () => {
     await expect(card).toBeVisible();
     await page.stepNodeByName(card, "Review").click();
     const panel = card.getByTestId(`workflow-step-panel-${reviewStep.id}`);
-    await panel.getByTestId("workflow-editor-tab-policies").click();
+    await openStepSection(panel, "board", false);
 
     const guidanceHelp = card.getByTestId(`${reviewStep.id}-pull-from-guidance-help`);
     await expect(guidanceHelp).toBeVisible();

@@ -3,6 +3,7 @@
 import { useTranslation } from "react-i18next";
 import { IconAlertTriangle, IconArrowDown, IconArrowUp, IconTrash } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
+import { controlSizingClassName } from "@kandev/ui/control-sizing";
 import { Checkbox } from "@kandev/ui/checkbox";
 import { Input } from "@kandev/ui/input";
 import { Label } from "@kandev/ui/label";
@@ -98,7 +99,7 @@ function ActionEditorToolbar({
         type="button"
         variant="ghost"
         size="icon"
-        className="h-11 w-11 cursor-pointer"
+        className={controlSizingClassName("icon", "cursor-pointer")}
         aria-label={t("workflows:moveActionUp")}
         disabled={readOnly || actionIndex === 0}
         onClick={() => onMove(-1)}
@@ -109,7 +110,7 @@ function ActionEditorToolbar({
         type="button"
         variant="ghost"
         size="icon"
-        className="h-11 w-11 cursor-pointer"
+        className={controlSizingClassName("icon", "cursor-pointer")}
         aria-label={t("workflows:moveActionDown")}
         disabled={readOnly || actionIndex === actionCount - 1}
         onClick={() => onMove(1)}
@@ -120,7 +121,10 @@ function ActionEditorToolbar({
         type="button"
         variant="ghost"
         size="icon"
-        className="h-11 w-11 cursor-pointer text-destructive hover:text-destructive"
+        className={controlSizingClassName(
+          "icon",
+          "cursor-pointer text-destructive hover:text-destructive",
+        )}
         aria-label={t("workflows:removeAction")}
         disabled={readOnly}
         onClick={onRemove}

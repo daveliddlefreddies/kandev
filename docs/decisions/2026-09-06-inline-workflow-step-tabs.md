@@ -1,6 +1,6 @@
 # ADR-2026-09-06-inline-workflow-step-tabs: Keep workflow step tabs inside the existing editor
 
-**Status:** accepted
+**Status:** superseded by 2026-10-05-workflow-step-summary-sections
 **Date:** 2026-09-06
 **Area:** frontend, workflow
 **Supersedes:** 2026-09-05-workflow-editor-pipeline-inspector

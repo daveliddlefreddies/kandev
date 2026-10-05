@@ -704,9 +704,23 @@ Regular Kanban does not currently expose label editing or label filters. Do not 
 
 A workflow sets task steps, prompts, agent profiles, session rules, and automatic transitions. Configure it in **Settings → Workspaces → _workspace_ → Workflows**.
 
-Open **Settings → Workspaces → _workspace_ → Workflows**, then select **Edit** on a workflow. The focused workflow editor shows the ordered pipeline and one selected step at a time. On desktop, the step inspector has **Agent**, **Automation**, and **Policies** tabs. On a phone, select a step from the vertical journey, then use its full-height step screen. A new workflow uses the same editor at `/workflows/new` and is created only when you save it.
+Select a step in a workflow card to edit its settings below the step strip.
+Each section shows a summary of its current settings:
 
-The editor uses one manual **Save changes** action for the workflow draft. Moving between steps or inspector tabs does not save or discard changes. If a workflow is synchronized from GitHub or GitLab, the editor stays available for inspection but its mutation controls are disabled; edit the source file and synchronize again.
+- **Agent:** profile, session behavior, auto-start, and plan mode.
+- **Instructions:** the step prompt and prompt templates.
+- **Automation:** ordered actions for each supported workflow event.
+- **Board behavior:** start step, manual moves, command-panel visibility, and WIP.
+- **Advanced:** context, session overrides, completion rules, and auto-archive.
+
+Expand a section to change it. Several sections can stay open together.
+Select an action to edit it inline while the other actions remain visible.
+The same sections are available on phones.
+
+Use **Save changes** to save every edited workflow on the page. Closing a
+section or selecting another step keeps your draft. New workflows are created
+only when saved. Synchronized workflows allow inspection but disable editing.
+To edit a synchronized workflow, change the source file and synchronize again.
 
 A workflow has a name, an optional **Default Agent Profile**, and ordered steps. When the workflow has a default profile, users cannot choose another profile in the task-creation dialog.
 

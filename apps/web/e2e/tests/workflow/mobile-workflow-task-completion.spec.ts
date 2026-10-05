@@ -1,6 +1,6 @@
 import { test, expect } from "../../fixtures/test-base";
 import { assertNoDocumentHorizontalOverflow } from "../../helpers/layout-assertions";
-import { WorkflowSettingsPage } from "../../pages/workflow-settings-page";
+import { WorkflowSettingsPage, openStepSection } from "../../pages/workflow-settings-page";
 
 test.describe("Workflow task completion on mobile", () => {
   test("keeps the final-step control and help disclosure touch accessible", async ({
@@ -23,12 +23,12 @@ test.describe("Workflow task completion on mobile", () => {
     await settings.goto(seedData.workspaceId);
     const card = await settings.findWorkflowCard(workflow.name, { waitForName: true });
     const firstPanel = await settings.selectStep(card, "Draft", true);
-    await firstPanel.getByTestId("workflow-editor-tab-policies").tap();
+    await openStepSection(firstPanel, "advanced", true);
     await expect(settings.completeTaskOnEnterCheckbox(card, first.id)).toHaveCount(0);
     await expect(settings.completeTaskOnEnterHelp(card, first.id)).toHaveCount(0);
 
     const finalPanel = await settings.selectStep(card, "Done", true);
-    await finalPanel.getByTestId("workflow-editor-tab-policies").tap();
+    await openStepSection(finalPanel, "advanced", true);
     const checkbox = settings.completeTaskOnEnterCheckbox(card, final.id);
     const help = settings.completeTaskOnEnterHelp(card, final.id);
     await expect(checkbox).toBeChecked();

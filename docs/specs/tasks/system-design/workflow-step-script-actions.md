@@ -335,7 +335,7 @@ WorkflowEditorViewModel {
   lifecycle_action_groups_by_step
   configuration_issues[]
   selected_step
-  selected_tab
+  expanded_sections
   selected_action
 }
 ```
@@ -355,134 +355,98 @@ frontend normalizer.
 
 ## Inline selected-step panel
 
-The existing selected-step panel gains three tabs. Its identity row remains
-above the tabs and owns editable step name, color, and the confirmed delete
-operation.
+The identity row retains editable step name, color, and confirmed deletion.
+Below it, five independent disclosures show live summaries of the draft:
 
-- **Agent** contains the prompt, effective profile, profile override, session
-  start/end behavior, and other agent-facing configuration.
-- **Automation** contains lifecycle action recipes and all existing transition
-  behavior, including turn start and child-task completion.
-- **Policies** contains less frequent task and session policy toggles such as
-  manual movement, WIP/pull, auto-archive timing, command panel, completion
-  signal, and cancellation behavior.
+- **Agent:** profile or referenced session, start/end policies, auto-start, and
+  plan mode.
+- **Instructions:** a single-line preview of the prompt, with templates and the
+  prompt editor inside the expanded section.
+- **Automation:** action count and turn-complete destination. Its event outline
+  covers entry, turn start, turn completion, child-task completion, and exit.
+- **Board behavior:** start step, manual moves, command-panel visibility, WIP,
+  and feeder step.
+- **Advanced:** context reset, original-session overrides, completion signal,
+  cancellation behavior, complete-task policy, and auto-archive timing.
 
-On desktop, the tab control is a compact segmented row near the selected-step
-heading. It sizes to its labels or a modest bounded width instead of filling the
-entire panel with three large buttons. Its visual height is 32 to 36 CSS pixels;
-coarse-pointer layouts preserve a 44-pixel hit area through the control's
-container or padding. The selected state uses the existing primary accent,
-while inactive tabs remain low-emphasis.
+Use the shared Collapsible primitive, neutral separators, a small chevron, and
+a readable label beside a muted summary. Several sections can remain open.
+Summaries update from the same draft used by the controls; missing references
+show an unavailable label rather than an internal identifier.
 
-The exact ownership of an existing control follows its user intent. Moving a
-control between tabs does not change persistence or runtime meaning. Only the
-selected step and selected action render detailed controls. Step summaries and
-action rows retain explicit dirty and error markers. Destructive removal
-remains a named, confirmed operation for persisted steps and workflows.
+Ordinary desktop fields and actions use the shared 28-pixel sizing contract.
+Summary rows use content-driven height and touch rows have at least a 44-pixel
+hit area. On phones, the title and summary stack within the same disclosure.
+Long summaries wrap or truncate inside the panel; they never widen the page.
 
-Workflow-level configuration checks aggregate field and transition diagnostics.
-Each issue carries a selection target consisting of step, tab, optional trigger
-and action position, and optional field. Activating an issue selects the
-workflow step, switches the inline tab, and moves focus to the resolvable
-control without leaving workspace settings.
+Keep session configuration mounted while its Advanced section is collapsed so
+capability-resolution state still participates in shared save eligibility.
+Prompt edits update the page-local draft immediately, including before closing
+the section or switching steps. Section expansion is local presentation state.
 
 Reference desktop composition:
 
 ```text
-+ Workflow details ---------------------------------------------------+
-| Name                 Default agent profile                          |
-| Description                                                        |
-| > Workflow prompt                                                  |
-|                                                                     |
-| Workflow steps                                                      |
-| [Backlog] -> [In progress *] -> [Review !] -> [Done] -> [+]          |
-|                                                                     |
-| In progress                                           [Delete]       |
-| [ Agent ] [ Automation ] [ Policies ]                               |
-| ------------------------------------------------------------------ |
-| When task enters                                2 actions            |
-| When agent finishes                             3 actions            |
-| When task leaves                                1 action             |
-|                                                   [+ Add action]    |
-+---------------------------------------------------------------------+
-                    [Unsaved changes] [Reset] [Save changes]
+[Backlog] -> [In progress *] -> [Review] -> [Done] -> [+]
+
++ In progress [name] [color] ----------------------------------------+
+| > Agent          Workflow / task default · Auto-start              |
+| > Instructions   Implement the requested change...                 |
+| v Automation     3 actions · On completion: Review                 |
+|   When task enters                                  [+ Action]     |
+|     Run script: pnpm install                        [Edit]         |
+|   When agent turn completes                         [+ Action]     |
+|     Run script: pnpm test                           [Edit]         |
+|     Move to Review                                  [Edit]         |
+|   > Turn starts / Child tasks complete / Task leaves               |
+| > Board behavior Start step · Manual moves · No WIP limit          |
+| > Advanced       Default settings                                 |
++-------------------------------------------------------------------+
 ```
 
-## Lifecycle action recipes
+## Lifecycle action editing
 
-The Automation tab presents ordered groups matching every currently editable
-runtime boundary:
+The existing action catalog, validation, and immutable mutations continue to
+own each trigger's ordered array. Entry and turn-completion groups open by
+default; other configured groups open, and unused groups start collapsed.
+Opening any event reveals its trigger-compatible add-action picker.
 
-- **When task enters** maps to `on_enter`.
-- **When agent starts** maps to `on_turn_start`.
-- **When agent finishes** maps to `on_turn_complete`.
-- **When child tasks complete** maps to `on_children_completed`.
-- **When task leaves** maps to `on_exit`.
+Selecting an action inserts its editor beneath that row, with an explicit
+collapse action. The other events and actions stay visible. Reordering and
+deletion repair local selection. Transition summaries resolve destinations by
+step name and position without changing the persisted wire shape.
 
-Each group renders compact action rows with an action label, human-readable
-summary, order, dirty state, and validation state. Selecting a row opens its
-focused editor. The add-action palette receives the trigger and displays only
-catalog actions supported by that trigger. Reorder and delete mutate only that
-trigger's array. Transition actions update the derived pipeline edge as soon as
-the local draft changes.
-
-The catalog exposes `run_script` for entry, turn completion, and exit only. Its summary shows the
-first meaningful command line and policy. The focused editor contains the
-multiline command, timeout seconds with the 600-second default, and failure
-behavior of **Block workflow** or **Continue workflow**. It also explains the
-selected lifecycle boundary and bound-session rule. A command editor may own
-horizontal code scrolling, but the enclosing inspector never causes page
-overflow.
-
-## Focused action editing
-
-Selecting an action replaces the Automation tab's action list with one editor
-and a clear back affordance. This is local presentation state inside the
-selected workflow card, not a dialog or route with a separate save contract.
-Edits remain visible when the author moves between actions, tabs, or steps.
-
-Step, tab, trigger, and action selection remain component state. Action
-positions are transient UI identities; add, delete, and reorder mutations
-repair selection without adding IDs to the workflow format.
-
-Existing action types migrate into the same descriptor pattern so the redesign
-does not create a second legacy form beside the recipe. The first release does
-not execute a **Test action** operation from the editor. Testing a script would
-require an independently specified executor, permission, audit, and side-effect
-lifecycle.
+The script editor retains command, timeout, failure policy, and session-binding
+guidance. Script actions remain supported only on entry, turn completion, and
+exit. No Test action operation is introduced.
 
 ## Mobile inline composition
 
-Phone viewports preserve the same workflow-card hierarchy. Workflow metadata
-stacks first, the existing step strip scrolls inside a bounded horizontal
-region, and the selected-step panel renders below it. Selecting a step or action
-does not navigate to a journey, step route, or full-height action route.
-
-The three tabs fill the available narrow panel width but remain visually compact.
-Each tab has a minimum 44-by-44 CSS-pixel touch target, visible focus and selected
-states, and no hover-only behavior. Tab content uses the document's existing
-vertical scroll owner. Action ordering uses explicit move controls where drag is
-not appropriate. Internal code and pipeline regions may scroll horizontally,
-but the document must not overflow.
-
-Reference phone composition:
+Keep the existing workflow card and bounded step strip. The selected-step
+panel uses the same summary sections with vertically stacked labels and
+summaries. No additional route or navigation journey is introduced. The
+document owns vertical scrolling; code and step-strip overflow stay contained.
+Existing mobile profile and action pickers use bottom drawers, and action
+ordering keeps its explicit move controls.
 
 ```text
-+ Development ----------------------------------+
-| Name                                          |
-| Default agent                                 |
-| Description                                   |
-|                                               |
-| Steps: [Todo] [Doing *] [Review] [Done]  ->   |
-|                                               |
-| Doing                                [Delete] |
-| [ Agent ][ Automation ][ Policies ]          |
-| --------------------------------------------- |
-| When task enters                   2 actions  |
-| When agent finishes                3 actions  |
-| When task leaves                   1 action   |
-|                                  [+ Action]   |
-+-----------------------------------------------+
++ Workflow steps ----------------+
+| [Todo] [Doing *] [Review] ->    |
+| Doing [name] [color]           |
+| > Agent                       |
+|   Task default · Auto-start   |
+| > Instructions                |
+|   Implement the change...     |
+| v Automation                  |
+|   Task enters                 |
+|   Run: pnpm install    [Edit]  |
+|   [+ Action]                  |
+|   Agent turn completes        |
+|   Run: pnpm test       [Edit]  |
+|   Move: Review         [Edit]  |
+| > Board behavior              |
+| > Advanced                    |
++-------------------------------+
 ```
 
 ## Draft and validation state
@@ -491,7 +455,7 @@ The editor preserves the settings manual-save contract. Each workflow card
 retains its existing page-local contributor, and the page may therefore own
 multiple dirty workflows at once. The shared fixed **Save changes** surface is
 the only persistence action for those edits. Selection among workflows, steps,
-tabs, and actions does not persist or discard data. Leaving settings while dirty
+sections, and actions does not persist or discard data. Leaving settings while dirty
 invokes the existing
 **Save and leave**, **Discard and leave**, or **Continue editing** flow; reload
 uses the existing native warning.
@@ -536,6 +500,6 @@ same review warning for repository-owned workflows.
 ## Related decisions
 
 - [Bind workflow scripts to the trigger-owning agent session](../../../decisions/2026-09-05-workflow-script-session-binding.md)
-- [Keep workflow step tabs inside the existing editor](../../../decisions/2026-09-06-inline-workflow-step-tabs.md)
+- [Keep workflow step tabs inside the existing editor](../../../decisions/2026-10-05-workflow-step-summary-sections.md)
 - [Separate workflow step session start and end behavior](../../../decisions/2026-08-31-workflow-profile-session-switch-policy.md)
 - [Host utility agentctl for sessionless ACP flows](../../../decisions/0002-host-utility-agentctl-for-sessionless-flows.md)

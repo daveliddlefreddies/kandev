@@ -29,6 +29,17 @@ function transitionActionType(
   return "move_to_next";
 }
 
+export async function openStepSection(
+  panel: Locator,
+  section: "agent" | "instructions" | "automation" | "board" | "advanced",
+  touch = false,
+) {
+  const toggle = panel.getByTestId(`workflow-section-toggle-${section}`);
+  if ((await toggle.getAttribute("aria-expanded")) === "true") return;
+  if (touch) await toggle.tap();
+  else await toggle.click();
+}
+
 export class WorkflowSettingsPage {
   readonly page: Page;
   readonly addWorkflowButton: Locator;
@@ -126,6 +137,9 @@ export class WorkflowSettingsPage {
     touch = false,
   ): Promise<void> {
     const list = this.editorActionList(trigger);
+    const eventToggle = list.getByTestId(`workflow-event-toggle-${trigger}`);
+    if ((await eventToggle.getAttribute("aria-expanded")) !== "true")
+      await this.activate(eventToggle, touch);
     if (touch) {
       await this.activate(list.getByRole("button", { name: "Add action" }), true);
       await this.activate(
@@ -146,7 +160,13 @@ export class WorkflowSettingsPage {
 
   /** Return from the focused action editor to its inline recipe. */
   async backFromEditorAction(touch = false): Promise<void> {
-    await this.activate(this.page.getByRole("button", { name: "Back to automation" }), touch);
+    await this.activate(
+      this.page.getByTestId("workflow-focused-action-editor").getByRole("button", {
+        name: "Collapse",
+        exact: true,
+      }),
+      touch,
+    );
   }
 
   /** Inline editing keeps the workflow journey mounted, so there is no back navigation. */
@@ -259,13 +279,16 @@ export class WorkflowSettingsPage {
       await this.activate(this.stepNodeByName(card, stepName), touch);
     }
     await expect(currentName).toHaveValue(stepName);
-    return card.locator('[data-testid^="workflow-step-panel-"]').first();
+    const panel = card.locator('[data-testid^="workflow-step-panel-"]');
+    await expect(panel).toHaveCount(1);
+    await openStepSection(panel, "agent", touch);
+    return panel;
   }
 
   /** Toggle auto-start for a step through the visible configuration panel. */
   async setAutoStart(card: Locator, stepName: string, enabled: boolean, touch = false) {
     const panel = await this.selectStep(card, stepName, touch);
-    await this.activate(panel.getByTestId("workflow-editor-tab-automation"), touch);
+    await openStepSection(panel, "automation", touch);
     const list = panel.getByTestId("workflow-action-list-on_enter");
     const action = list.locator("button").filter({ hasText: "Auto-start agent" }).first();
     const hasAction = (await action.count()) > 0;
@@ -291,7 +314,7 @@ export class WorkflowSettingsPage {
     touch = false,
   ) {
     const panel = await this.selectStep(card, stepName, touch);
-    await this.activate(panel.getByTestId("workflow-editor-tab-automation"), touch);
+    await openStepSection(panel, "automation", touch);
     const type = transitionActionType(optionName);
     await this.addEditorAction("on_turn_complete", type, touch);
     if (!(await this.cycleGuardDialog.isVisible().catch(() => false))) {
@@ -307,7 +330,7 @@ export class WorkflowSettingsPage {
     touch = false,
   ) {
     const panel = await this.selectStep(card, stepName, touch);
-    await this.activate(panel.getByTestId("workflow-editor-tab-policies"), touch);
+    await openStepSection(panel, "advanced", touch);
     const checkbox = panel.getByRole("checkbox", {
       name: "Run completion actions when a turn is cancelled",
     });
