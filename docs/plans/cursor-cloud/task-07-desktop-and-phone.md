@@ -267,3 +267,5 @@ A phone fallback must not overwrite desktop preferences. Hidden workspace panels
 ## Results
 
 Completed 2026-09-26. Desktop and phone profile, task-start, chat, capability, and recovery surfaces are implemented. Verification passed: focused frontend tests 51/51, E2E runner tests 15/15, desktop normal-flow E2E 5/5, phone normal-flow E2E 4/4, web typecheck, lint with zero warnings, i18n checks, ratchet, and E2E build. Backend profile/discovery and managed-session tests passed. Unknown submission stays unresolved on archive; archive does not issue a blind cancellation without a known remote run ID.
+
+Executor setup remediation, 2026-10-05: added the independently accessible, feature-gated Cursor Cloud create entry and dedicated form. The form creates the executor before its configured profile and removes incomplete rows on profile failure. Desktop and phone mock-provider tests verify save, reload, agent discovery, and phone layout and Save touch target. Focused unit tests cover creation and cleanup failures.

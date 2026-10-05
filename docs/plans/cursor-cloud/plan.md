@@ -328,6 +328,17 @@ Design-package checks passed on 2026-09-25:
 
 Implementation files remain unstaged and uncommitted. Live Cursor entitlement and callback reachability remain unvalidated rollout gates; no credentials or paid execution were used.
 
+## Executor setup remediation (2026-10-05)
+
+- [x] Add the feature-gated Cursor Cloud creation entry and direct route.
+- [x] Create the executor and profile together; remove the incomplete executor if profile creation fails.
+- [x] Display the translated Cursor Cloud label and cloud icon.
+- [x] Verify desktop and phone creation, saved configuration, and agent discovery with the mock provider.
+- [x] Verify disabled-feature navigation.
+- [x] Prepare the verified fix for commit and PR push.
+
+The setup form uses the shared secret picker, callback connection test, and settings Save action. Live Cursor entitlement and callback reachability remain rollout gates.
+
 ## Live rollout procedure
 
 Automated tests never require a Cursor key. Before enabling an installation, use a disposable repository and a dedicated credential.

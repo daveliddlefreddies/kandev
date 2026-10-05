@@ -57,6 +57,7 @@ import { RemoteDockerCreatePage } from "./remote-docker-create-page";
 import { SSHCreatePage } from "./ssh-create-page";
 import { KubernetesCreatePage } from "./kubernetes-create-page";
 import { buildProfileConfig } from "./create-profile-config";
+import { CursorCloudCreatePage } from "./cursor-cloud-create-page";
 
 const EXECUTORS_ROUTE = "/settings/executors";
 const SPRITES_TOKEN_KEY = "SPRITES_API_TOKEN";
@@ -69,11 +70,14 @@ function ExecutorTypeIcon({ type }: { type: string }) {
 }
 
 export default function CreateProfilePage({ executorType }: { executorType: string }) {
+  const cursorCloudEnabled = useAppStore((state) => state.features.cursorCloud);
   const typeInfo = EXECUTOR_TYPE_MAP[executorType];
 
-  if (!typeInfo) {
+  if (!typeInfo || (executorType === "cursor_cloud" && !cursorCloudEnabled)) {
     return <InvalidTypeFallback />;
   }
+
+  if (executorType === "cursor_cloud") return <CursorCloudCreatePage />;
 
   if (executorType === "remote_docker") {
     return <RemoteDockerCreatePage />;

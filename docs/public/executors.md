@@ -76,7 +76,7 @@ download requirements.
 
 ## Create and select a profile
 
-Open **Settings > Executors**, then choose **Local**, **Worktree**, **Docker**, **Kubernetes**, **Sprites.dev**, **Remote Docker**, or **SSH** under **Create New Profile**. Local and Worktree profiles already exist in a new database.
+Open **Settings > Executors**, then choose **Local**, **Worktree**, **Docker**, **Kubernetes**, **Sprites.dev**, **Remote Docker**, or **SSH** under **Create New Profile**. Local and Worktree profiles already exist in a new database. **Cursor Cloud** appears after you enable its feature toggle and restart Kandev.
 
 Open a saved profile from the Executors hub, the Settings tree, an executor profile list, Settings search, or a task's executor disclosure to use the same complete profile editor.
 
