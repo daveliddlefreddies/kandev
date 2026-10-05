@@ -339,6 +339,12 @@ Implementation files remain unstaged and uncommitted. Live Cursor entitlement an
 
 The setup form uses the shared secret picker, callback connection test, and settings Save action. Live Cursor entitlement and callback reachability remain rollout gates.
 
+## CI remediation (2026-10-05)
+
+The first-run executor test derived its expected cards from every Settings route except Remote Docker. Adding the gated Cursor Cloud route made that expectation include an executor outside the documented onboarding catalog. The test now excludes Cursor Cloud and explicitly checks that its card is absent. Production behavior and public contracts are unchanged.
+
+Local reproduction failed before the fix. The onboarding, executor-copy, and executor-icon suites passed afterward (46 tests), and changed-file lint passed. CI on the remediation commit remains pending until GitHub confirms its checks.
+
 ## Live rollout procedure
 
 Automated tests never require a Cursor key. Before enabling an installation, use a disposable repository and a dedicated credential.
