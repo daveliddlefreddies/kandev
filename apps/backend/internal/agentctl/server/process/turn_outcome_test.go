@@ -286,3 +286,27 @@ func TestForwardUpdatesStampsControlTurnIDOnDeliveredCopy(t *testing.T) {
 		t.Fatal("timed out waiting for the complete event to be forwarded")
 	}
 }
+
+func TestTerminalOutcomeRecordingDoesNotWaitForLifecycleTeardownLock(t *testing.T) {
+	m := &Manager{}
+	recorder := &fakeTurnOutcomeRecorder{}
+	m.SetTurnOutcomeRecorder("instance-1", recorder)
+	m.mu.Lock()
+	done := make(chan struct{})
+	go func() {
+		event := adapter.AgentEvent{Type: adapter.EventTypeError}
+		m.recordTerminalOutcome(&event)
+		close(done)
+	}()
+	select {
+	case <-done:
+		m.mu.Unlock()
+	case <-time.After(time.Second):
+		m.mu.Unlock()
+		<-done
+		t.Fatal("terminal outcome recording blocked behind lifecycle teardown")
+	}
+	if len(recorder.calls) != 1 {
+		t.Fatalf("recorder calls = %d, want 1", len(recorder.calls))
+	}
+}
