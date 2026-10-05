@@ -27,7 +27,12 @@ function requestSocket(action: string, payload: Record<string, unknown>) {
   );
   const response = postMessage.mock.calls
     .map(([message]) => message as DemoWorkerResponse)
-    .find((message) => message.kind === "ws-event" && message.event === "message");
+    .find(
+      (message) =>
+        message.kind === "ws-event" &&
+        message.event === "message" &&
+        JSON.parse(message.data ?? "{}").id === `request-${action}`,
+    );
   return JSON.parse((response as Extract<DemoWorkerResponse, { kind: "ws-event" }>).data ?? "{}");
 }
 

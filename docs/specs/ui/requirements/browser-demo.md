@@ -28,6 +28,7 @@ The browser demo lets visitors explore the application without a backend, instal
 - **AC-UI-BROWSER-DEMO-001.6:** Repository selection, integration settings, command previews, statistics, database data, and storage actions return demo-local responses.
 - **AC-UI-BROWSER-DEMO-001.7:** Task selection navigates to the selected session. The demo does not open a task preview by default.
 - **AC-UI-BROWSER-DEMO-001.8:** Release builds publish the browser demo archive and checksum within the compressed-size limit.
+- **AC-UI-BROWSER-DEMO-001.9:** Follow-up messages retain conversation history and trigger a brief simulated thinking and tool turn, followed by a varied answer. Direct and queued sends return to idle review without duplicate turns on retry.
 
 ## Boundaries
 

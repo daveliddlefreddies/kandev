@@ -30,6 +30,13 @@ Workflow modules provide editable workflow data, templates, synchronization, and
 The system runtime supplies database, disk, and storage data through the current typed contracts.
 These modules implement criteria .2 through .7 without a separate UI.
 
+The discovery runtime handles repository discovery and refresh through the current selector contracts.
+The Jira runtime supplies local projects, statuses, tickets, dashboard filters, and transitions.
+Follow-up sends preserve history and emit ordered thinking, tool, and answer events through the conversation transport.
+Replies vary between turns. Queued sends drain locally, and retries retain their original message identity.
+Each session serializes its simulated turns and returns to idle review. Reset cancels pending callbacks.
+These responses remain simulations and do not use a model or integration credentials. Criterion .9 covers follow-up behavior.
+
 ## Release distribution
 
 `scripts/browser-demo/build-web-demo.sh` builds the SPA under `/browser-demo/app/`.

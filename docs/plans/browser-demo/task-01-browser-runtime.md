@@ -16,6 +16,7 @@ acceptance_criteria:
   - AC-UI-BROWSER-DEMO-001.6
   - AC-UI-BROWSER-DEMO-001.7
   - AC-UI-BROWSER-DEMO-001.8
+  - AC-UI-BROWSER-DEMO-001.9
 system_design:
   - ../../specs/ui/system-design/browser-demo.md
 ---
@@ -87,3 +88,12 @@ Seeded messages use increasing timestamps so the chat renderer preserves convers
 The final runtime checks passed 54 tests across nine files, typecheck, and focused lint.
 Headless Chrome verified task navigation and a live approval response without a local server.
 Landing checks confirmed that hero links do not overlap the video at six desktop and phone widths.
+
+The latest preview check found new Jira dashboard and repository discovery routes without demo responses.
+The worker now serves ticket filters and transitions, discovery refreshes, and repository-set reads locally.
+Follow-up chat sends retain history and simulate thinking, a file read, and a varied answer before idle review.
+Direct and queued sends deduplicate retries and serialize turns. Reset cancels stale callbacks.
+New incident-response tasks retain their own workflow steps during completion.
+Focused tests passed 66 tests across 12 files. Typecheck, focused lint, and the translation ratchet passed.
+Headless Chrome verified direct and queued replies, Jira ticket filtering, and both discovered repositories in the new-task picker.
+The production demo build passed. No local server or real agent ran for these checks.

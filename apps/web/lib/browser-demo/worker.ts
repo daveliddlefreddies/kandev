@@ -55,6 +55,11 @@ import { createDemoSystemRuntime } from "./system-runtime";
 import { createDemoWorkflowRuntime } from "./workflow-runtime";
 import { createDemoSidebarPage } from "./sidebar-runtime";
 import { createDemoConversationRuntime } from "./conversation-runtime";
+import { generateUUID } from "@/lib/uuid";
+import type { QueuedMessage, QueueStatus } from "@/lib/state/slices/session/types";
+import { routeDemoDiscovery } from "./discovery-runtime";
+import { createDemoJiraRuntime } from "./jira-runtime";
+import { makeDemoReplyMessages } from "./reply-messages";
 
 const scope: DedicatedWorkerGlobalScope = self as never;
 let state = createDemoState();
@@ -63,6 +68,11 @@ let multiRepoFiles = createDemoMultiRepoFiles();
 let plansByTask = createDemoPlans();
 let systemRuntime = createDemoSystemRuntime();
 let workflowRuntime = makeWorkflowRuntime();
+let jiraRuntime = createDemoJiraRuntime();
+const activeRuns = new Set<string>();
+const pendingReplies = new Map<string, Message[]>();
+const queuedMessages = new Map<string, QueuedMessage>();
+const acceptedQueueMessages = new Map<string, QueuedMessage>();
 const fileReviewsBySession = new Map<
   string,
   Map<string, { reviewed: boolean; diffHash: string }>
@@ -187,6 +197,11 @@ scope.onmessage = (event: MessageEvent<DemoWorkerRequest>) => {
     plansByTask = createDemoPlans();
     systemRuntime = createDemoSystemRuntime();
     workflowRuntime = makeWorkflowRuntime();
+    jiraRuntime = createDemoJiraRuntime();
+    activeRuns.clear();
+    pendingReplies.clear();
+    queuedMessages.clear();
+    acceptedQueueMessages.clear();
     fileReviewsBySession.clear();
     conversationRuntime.reset();
     post({ kind: "result", id: message.id, value: createBootPayload(state) });
@@ -238,6 +253,11 @@ export async function handleHttp(request: DemoHttpRequest): Promise<DemoHttpResp
   const method = request.method.toUpperCase();
   const input = parseBody(request.body);
 
+  const discoveryResponse = routeDemoDiscovery(path, method, url.searchParams);
+  if (discoveryResponse) return discoveryResponse;
+  const jiraResponse = jiraRuntime.route(path, method, url.searchParams, input);
+  if (jiraResponse) return jiraResponse;
+
   const systemResponse = systemRuntime.route({ path, method, input });
   if (systemResponse) return systemResponse;
   const workflowResponse = workflowRuntime.route({
@@ -275,8 +295,8 @@ export async function handleHttp(request: DemoHttpRequest): Promise<DemoHttpResp
     return json({ scripts: DEMO_REPOSITORY_SCRIPTS, total: DEMO_REPOSITORY_SCRIPTS.length });
   if (path === `/api/v1/repositories/${DEMO_IDS.apiRepository}/scripts`)
     return json({ scripts: [], total: 0 });
-  if (path === `/api/v1/workspaces/${DEMO_IDS.workspace}/repositories/discover`)
-    return json({ roots: [], repositories: [], total: 0 });
+  if (path === `/api/v1/workspaces/${DEMO_IDS.workspace}/repository-sets` && method === "GET")
+    return json({ repository_sets: [], total: 0 });
   if (path === "/api/v1/agents") return json({ agents: demoAgents, total: demoAgents.length });
   if (path === "/api/v1/agents/available") return json({ agents: [], tools: [], total: 0 });
   if (path === "/api/v1/executors")
@@ -728,6 +748,19 @@ export function handleSocketRequest(socketId: string, raw: string) {
     });
     return;
   }
+  if (action === "message.add" || action === "message.queue.add") {
+    handleFollowUp(socketId, id, action, payload);
+    return;
+  }
+  if (action === "message.queue.get") {
+    const session = state.sessions.find((candidate) => candidate.id === payload.session_id);
+    if (!session || session.task_id !== payload.task_id) {
+      respond(socketId, id, { message: "Session not found" }, true);
+      return;
+    }
+    respond(socketId, id, demoQueueStatus(session));
+    return;
+  }
   if (action === "message.search") {
     const query = String(payload.query || "").toLowerCase();
     const messages = state.messagesBySession[String(payload.session_id)] ?? [];
@@ -1097,11 +1130,16 @@ function startAgent(task: Task, prompt: string) {
   task.primary_session_state = "RUNNING";
   task.session_count = 1;
   task.state = "IN_PROGRESS";
-  task.workflow_step_id = DEMO_IDS.steps.progress;
+  const steps = workflowRuntime
+    .snapshot()
+    .steps.filter((step) => step.workflow_id === task.workflow_id && step.stage_type === "work");
+  task.workflow_step_id =
+    (steps.find((step) => !step.is_start_step) ?? steps[0])?.id ?? task.workflow_step_id;
   const user = makeMessage(`${sessionId}-user`, sessionId, task.id, "user", prompt);
-  state.messagesBySession[sessionId] = [user];
+  state.messagesBySession[sessionId] = [];
+  appendMessage(user);
   notify(TASK_UPDATED_EVENT, taskEvent(task));
-  notify("session.message.added", messageEvent(user));
+  activeRuns.add(session.id);
   scheduleAgentRun(task, session);
   return session;
 }
@@ -1112,8 +1150,7 @@ function scheduleAgentRun(task: Task, session: TaskSession) {
     setTimeout(
       () => {
         if (!state.tasks.includes(task) || !state.sessions.includes(session)) return;
-        state.messagesBySession[session.id]?.push(message);
-        notify("session.message.added", messageEvent(message));
+        appendMessage(message);
         if (index === messages.length - 1) finishAgentRun(task, session);
         persist();
       },
@@ -1123,14 +1160,23 @@ function scheduleAgentRun(task: Task, session: TaskSession) {
 }
 
 function finishAgentRun(task: Task, session: TaskSession) {
+  activeRuns.delete(session.id);
+  const pending = pendingReplies.get(session.id)?.shift();
+  if (pending) {
+    scheduleReply(task, session, pending);
+    return;
+  }
   const now = new Date().toISOString();
   const oldSessionState = session.state;
   session.state = "IDLE";
   session.updated_at = now;
   task.state = "REVIEW";
-  task.workflow_step_id = DEMO_IDS.steps.review;
+  task.workflow_step_id =
+    workflowRuntime
+      .snapshot()
+      .steps.find((step) => step.workflow_id === task.workflow_id && step.stage_type === "review")
+      ?.id ?? task.workflow_step_id;
   task.primary_session_state = "IDLE";
-  task.primary_session_pending_action = null;
   task.review_status = "pending";
   task.updated_at = now;
   notify("session.state_changed", {
@@ -1142,6 +1188,177 @@ function finishAgentRun(task: Task, session: TaskSession) {
   });
   notify(TASK_UPDATED_EVENT, taskEvent(task));
   notifyGitStatus(session.id);
+}
+
+function appendMessage(message: Message) {
+  const messages = (state.messagesBySession[message.session_id] ??= []);
+  const lastTime = Date.parse(messages.at(-1)?.created_at ?? "") || 0;
+  const now = new Date(Math.max(Date.now(), lastTime + 1)).toISOString();
+  message.created_at = now;
+  message.updated_at = now;
+  messages.push(message);
+  notify("session.message.added", messageEvent(message));
+}
+
+// i18n-exempt: browser demo transport diagnostics use literal fixture text
+function handleFollowUp(
+  socketId: string,
+  id: string,
+  action: string,
+  payload: Record<string, unknown>,
+) {
+  const task = findTask(String(payload.task_id));
+  const session = state.sessions.find((candidate) => candidate.id === payload.session_id);
+  const content = String(payload.content ?? "");
+  if (!task || !session || session.task_id !== task.id || !content.trim()) {
+    respond(socketId, id, { message: "A matching task, session, and message are required" }, true);
+    return;
+  }
+  if (action === "message.queue.add") {
+    if (payload.session_incarnation_id !== session.queue_incarnation_id) {
+      respond(
+        socketId,
+        id,
+        { message: "Queue session is no longer available", code: "queue_session_unavailable" },
+        true,
+      );
+      return;
+    }
+    queueFollowUp(socketId, id, task, session, payload);
+    return;
+  }
+  const messageId = String(payload.client_message_id || generateUUID());
+  const existing = state.messagesBySession[session.id]?.find((message) => message.id === messageId);
+  if (existing) {
+    respond(
+      socketId,
+      id,
+      existing,
+      existing.author_type !== "user" || existing.content !== content,
+    );
+    return;
+  }
+  const user = makeMessage(messageId, session.id, task.id, "user", content);
+  appendMessage(user);
+  respond(socketId, id, user);
+  enqueueReply(task, session, user);
+  persist();
+}
+
+function queueFollowUp(
+  socketId: string,
+  id: string,
+  task: Task,
+  session: TaskSession,
+  payload: Record<string, unknown>,
+) {
+  const content = String(payload.content ?? "");
+  const queueId = String(payload.client_queue_id || generateUUID());
+  const accepted = state.messagesBySession[session.id]?.find(
+    (message) => message.metadata?.client_queue_id === queueId,
+  );
+  const existing =
+    acceptedQueueMessages.get(queueId) ??
+    (accepted
+      ? {
+          id: queueId,
+          task_id: task.id,
+          session_id: session.id,
+          content: accepted.content,
+          plan_mode: payload.plan_mode === true,
+          queued_at: accepted.created_at,
+        }
+      : undefined);
+  if (existing) {
+    respond(
+      socketId,
+      id,
+      existing,
+      existing.session_id !== session.id || existing.content !== content,
+    );
+    return;
+  }
+  const entry: QueuedMessage = {
+    id: queueId,
+    task_id: task.id,
+    session_id: session.id,
+    content,
+    plan_mode: payload.plan_mode === true,
+    queued_at: new Date().toISOString(),
+  };
+  acceptedQueueMessages.set(queueId, entry);
+  queuedMessages.set(queueId, entry);
+  respond(socketId, id, entry);
+  notify("message.queue.status_changed", demoQueueStatus(session));
+  setTimeout(() => {
+    if (!state.tasks.includes(task) || !state.sessions.includes(session)) return;
+    queuedMessages.delete(queueId);
+    const user = makeMessage(`${queueId}-user`, session.id, task.id, "user", content, {
+      metadata: { client_queue_id: queueId },
+    });
+    appendMessage(user);
+    notify("message.queue.status_changed", demoQueueStatus(session));
+    enqueueReply(task, session, user);
+    persist();
+  }, 100);
+}
+
+function demoQueueStatus(session: TaskSession): QueueStatus {
+  const entries = [...queuedMessages.values()].filter((entry) => entry.session_id === session.id);
+  return {
+    task_id: session.task_id,
+    session_id: session.id,
+    session_incarnation_id: session.queue_incarnation_id,
+    entries,
+    count: entries.length,
+    max: 10,
+    merge_enabled: false,
+    auto_run: true,
+  };
+}
+
+function enqueueReply(task: Task, session: TaskSession, user: Message) {
+  if (activeRuns.has(session.id)) {
+    const pending = pendingReplies.get(session.id) ?? [];
+    pending.push(user);
+    pendingReplies.set(session.id, pending);
+  } else {
+    scheduleReply(task, session, user);
+  }
+}
+
+function scheduleReply(task: Task, session: TaskSession, user: Message) {
+  activeRuns.add(session.id);
+  const oldState = session.state;
+  session.state = "RUNNING";
+  session.updated_at = new Date().toISOString();
+  task.primary_session_state = "RUNNING";
+  task.updated_at = session.updated_at;
+  notify("session.state_changed", {
+    session_id: session.id,
+    task_id: task.id,
+    old_state: oldState,
+    new_state: "RUNNING",
+    updated_at: session.updated_at,
+  });
+  notify(TASK_UPDATED_EVENT, taskEvent(task));
+  const previous = state.messagesBySession[session.id]?.findLast(
+    (message) => typeof message.metadata?.demo_reply_variant === "number",
+  );
+  const messages = makeDemoReplyMessages(
+    task,
+    session,
+    user,
+    previous?.metadata?.demo_reply_variant as number | undefined,
+  );
+  messages.forEach((message, index) => {
+    setTimeout(() => {
+      if (!state.tasks.includes(task) || !state.sessions.includes(session)) return;
+      appendMessage(message);
+      if (index === messages.length - 1) finishAgentRun(task, session);
+      persist();
+    }, [300, 900, 1800][index]);
+  });
 }
 
 // The detailed tool metadata is intentionally colocated so the streamed turn stays coherent.

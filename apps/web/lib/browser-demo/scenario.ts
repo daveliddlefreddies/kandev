@@ -16,7 +16,7 @@ import type { GitHubPR, PRFeedback, TaskPR } from "@/lib/types/github";
 import type { DemoWorkflowRuntimeSnapshot } from "./workflow-runtime";
 
 export const DEMO_STORAGE_KEY = "kandev-browser-demo:v1";
-export const DEMO_SCENARIO_VERSION = 5;
+export const DEMO_SCENARIO_VERSION = 6;
 
 export const DEMO_IDS = {
   workspace: "demo-workspace",
@@ -1636,6 +1636,7 @@ export function makeSession(
   return {
     id: id as never,
     task_id: taskId as never,
+    queue_incarnation_id: `${id}-queue`,
     name: "Mock agent",
     agent_profile_id: DEMO_IDS.profile as never,
     repository_id: primaryRepositoryId,
