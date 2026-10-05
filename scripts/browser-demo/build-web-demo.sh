@@ -10,6 +10,7 @@ else
 fi
 
 cd "$ROOT_DIR/apps/web"
+pnpm run prebuild
 VITE_KANDEV_BROWSER_DEMO=true \
 VITE_KANDEV_BASE_PATH=/browser-demo/app/ \
   pnpm exec vite build --outDir "$OUTPUT_DIR"

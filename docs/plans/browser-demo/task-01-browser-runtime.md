@@ -71,3 +71,10 @@ Focused verification passed 54 tests across 10 files. Typecheck, translation che
 The demo production build passed and produced a 13,576,609-byte compressed archive, below the 25 MiB limit.
 Landing passed 117 tests and its combined production build. Its fresh Cloudflare Pages check passed.
 Kandev full-suite CI and local lint remain pending at this revision. No local demo server started during this rebase.
+
+The Pages preview audit found a missing demo bundle and a new Automations sidebar contract.
+The worker now returns the expected arrays and envelopes for six automation read actions.
+The standalone demo build now runs prebuild to generate release data in fresh checkouts.
+Landing PR #169 adds a pinned source fallback and rejects exports without the demo assets.
+The focused worker and installation tests passed 24 tests. Typecheck and focused lint passed.
+Browser verification rendered the demo task board from the production export without a local server.

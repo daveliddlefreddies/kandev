@@ -463,6 +463,27 @@ export function handleSocketRequest(socketId: string, raw: string) {
   const payload = request.payload ?? {};
   if (!id) return;
 
+  if (
+    action === "automation.list" ||
+    action === "automation.runs.list" ||
+    action === "automation.trigger_types"
+  ) {
+    respond(socketId, id, []);
+    return;
+  }
+  if (action === "automation.summaries") {
+    respond(socketId, id, { summaries: [] });
+    return;
+  }
+  if (action === "automation.summary") {
+    respond(socketId, id, { summary: null });
+    return;
+  }
+  if (action === "automation.runs.list_workspace") {
+    respond(socketId, id, { runs: [] });
+    return;
+  }
+
   if (action === "permission.respond") {
     const pendingId = String(payload.pending_id || "");
     const sessionId = String(payload.session_id || "");

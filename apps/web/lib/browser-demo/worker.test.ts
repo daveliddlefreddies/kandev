@@ -45,6 +45,21 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("browser demo sidebar bootstrap", () => {
+  it.each([
+    ["automation.list", []],
+    ["automation.runs.list", []],
+    ["automation.trigger_types", []],
+    ["automation.summaries", { summaries: [] }],
+    ["automation.summary", { summary: null }],
+    ["automation.runs.list_workspace", { runs: [] }],
+  ])("returns the API contract for %s", (action, expected) => {
+    const response = requestSocket(action as string, { workspace_id: DEMO_IDS.workspace });
+    expect(response.type).toBe("response");
+    expect(response.payload).toEqual(expected);
+  });
+});
+
 describe("browser demo worker HTTP runtime", () => {
   it("serves the workspace and repository scripts used by settings and task panels", async () => {
     const workspace = await get(`/api/v1/workspaces/${DEMO_IDS.workspace}`);
