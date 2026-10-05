@@ -1,0 +1,90 @@
+{
+  "pr": 4229,
+  "capture": "isolated repository Playwright CLI",
+  "inspected": true,
+  "compressed": true,
+  "assets": [
+    {
+      "name": "onboarding-desktop",
+      "file": "/Users/cfl12/Projects/kandev-4/apps/web/.pr-assets/onboarding-desktop.png",
+      "caption": "Desktop onboarding with the shared model/options selector and supported passthrough.",
+      "width": 1280,
+      "height": 800,
+      "bytes": 14109,
+      "captured_at": "2026-10-05T19:06:36.118924+00:00"
+    },
+    {
+      "name": "onboarding-short-desktop",
+      "file": "/Users/cfl12/Projects/kandev-4/apps/web/.pr-assets/onboarding-short-desktop.png",
+      "caption": "Short desktop window keeps model controls and navigation reachable.",
+      "width": 1280,
+      "height": 500,
+      "bytes": 14952,
+      "captured_at": "2026-10-05T19:06:36.230948+00:00"
+    },
+    {
+      "name": "onboarding-tall-desktop",
+      "file": "/Users/cfl12/Projects/kandev-4/apps/web/.pr-assets/onboarding-tall-desktop.png",
+      "caption": "A 21-agent catalog stays inside the 720px dialog on a tall window.",
+      "width": 1280,
+      "height": 1200,
+      "bytes": 19708,
+      "captured_at": "2026-10-05T19:06:36.324005+00:00"
+    },
+    {
+      "name": "onboarding-model-options",
+      "file": "/Users/cfl12/Projects/kandev-4/apps/web/.pr-assets/onboarding-model-options.png",
+      "caption": "Reasoning options use the shared model picker within onboarding.",
+      "width": 1280,
+      "height": 800,
+      "bytes": 12953,
+      "captured_at": "2026-10-05T19:06:36.203035+00:00"
+    },
+    {
+      "name": "onboarding-error-desktop",
+      "file": "/Users/cfl12/Projects/kandev-4/apps/web/.pr-assets/onboarding-error-desktop.png",
+      "caption": "Failed discovery preserves selection and provides retry.",
+      "width": 1280,
+      "height": 800,
+      "bytes": 16569,
+      "captured_at": "2026-10-05T19:06:36.161848+00:00"
+    },
+    {
+      "name": "onboarding-auth-desktop",
+      "file": "/Users/cfl12/Projects/kandev-4/apps/web/.pr-assets/onboarding-auth-desktop.png",
+      "caption": "Authentication recovery links directly to the saved profile.",
+      "width": 1280,
+      "height": 800,
+      "bytes": 18015,
+      "captured_at": "2026-10-05T19:06:36.077452+00:00"
+    },
+    {
+      "name": "onboarding-tablet",
+      "file": "/Users/cfl12/Projects/kandev-4/apps/web/.pr-assets/onboarding-tablet.png",
+      "caption": "Tablet onboarding keeps 44px model, refresh and passthrough targets.",
+      "width": 768,
+      "height": 851,
+      "bytes": 13876,
+      "captured_at": "2026-10-05T19:06:36.260465+00:00"
+    },
+    {
+      "name": "profile-desktop",
+      "file": "/Users/cfl12/Projects/kandev-4/apps/web/.pr-assets/profile-desktop.png",
+      "caption": "Full profile settings use a compact refresh beside model and mode.",
+      "width": 1280,
+      "height": 800,
+      "bytes": 28232,
+      "captured_at": "2026-10-05T19:06:36.371168+00:00"
+    },
+    {
+      "name": "profile-phone",
+      "file": "/Users/cfl12/Projects/kandev-4/apps/web/.pr-assets/profile-phone.png",
+      "caption": "Phone profile settings retain the shared model/options selector and touch refresh.",
+      "width": 393,
+      "height": 851,
+      "bytes": 12711,
+      "captured_at": "2026-10-05T19:06:36.390118+00:00"
+    }
+  ],
+  "source_commit": "2a234b0da154ead21b5c7f8f0c7e4d7dc15474b5"
+}
