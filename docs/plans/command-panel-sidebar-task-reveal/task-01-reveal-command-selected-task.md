@@ -5,7 +5,21 @@ status: done
 wave: 1
 depends_on: []
 plan: "plan.md"
-spec: "../../specs/ui/requirements/command-panel-sidebar-task-reveal.md"
+requirements:
+  - REQ-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001
+acceptance_criteria:
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.1
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.2
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.3
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.4
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.5
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.6
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.7
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.8
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.9
+  - AC-UI-COMMAND-PANEL-SIDEBAR-TASK-REVEAL-001.10
+system_design:
+  - ../../specs/ui/system-design/command-panel-sidebar-task-reveal.md
 ---
 
 # Task 01: Reveal command-selected sidebar task
@@ -92,3 +106,11 @@ unchanged document scroll. The existing one-second cue assertion deadline
 and production cue duration are unchanged.
 
 `cd apps/web && pnpm e2e:run --host --no-build --shards 1 --project chromium tests/task/sidebar-scroll-preservation.spec.ts tests/lsp/lsp-file-intelligence.spec.ts -- --retries 0 --trace=retain-on-failure`: all 27 cases passed in 9.8 minutes, including all eight sidebar-scroll cases, delayed guarded navigation, and above-viewport selection. `cd apps/web && pnpm exec vitest run lib/sidebar/task-navigation.test.ts`: 19 tests passed. Full web lint and typecheck, focused Prettier/ESLint, and whitespace checks passed. No production navigation change or deadline increase; exact pushed-head CI remains pending.
+
+
+The same follow-up updates this legacy work order's `spec` frontmatter to the
+current requirement/acceptance/design contract. Hosted documentation coverage
+rejected the obsolete field on `73a04b32bb4`; the exact local coverage
+preflight failed with that field and passed after migration across all 50
+changed work orders. This metadata correction changes no implementation scope
+or product behavior.
