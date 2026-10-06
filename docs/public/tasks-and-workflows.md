@@ -177,6 +177,12 @@ Use **New Task** in the sidebar. In an open task, the **Task** split button also
    | **Remote** | A remote repository                               | Search GitHub, GitLab, or Azure DevOps, or paste a supported URL. Public GitHub reads and public `gitlab.com` branch discovery work without credentials. Private access and authenticated browse/write actions require provider credentials. |
    | **None**   | Planning, research, or work outside Git           | Use a scratch workspace or an optional folder on the Kandev host. Git worktree and repository-aware Changes, branch, and pull-request features are unavailable.                                                                              |
 
+   In-app directory browsers list directories on the Kandev host. By default,
+   they hide names that start with a dot, such as `.config` or `.local`. Select
+   **Hidden folders** beside the path to show them. The switch is off by default,
+   and Kandev remembers your choice across in-app browsers. The desktop app's
+   native folder picker uses the operating system's control for hidden entries.
+
 4. **Choose an executor and agent profile.** Both profiles must be compatible. A workflow default agent profile locks the task-level selector.
 5. **Add a description when needed.** Use the eye button beside **Enhance prompt with AI** to preview a step's prompt template. The preview does not resolve task IDs or saved-prompt references until the task exists.
 6. **Choose how to start:**
@@ -663,6 +669,11 @@ banner shifts the rows. These pages are kept only in the current browser session
 for up to five minutes. Task changes, workspace changes, and signing out invalidate
 the relevant pages. Switching views leaves your open conversation in place,
 including in the phone **Tasks** drawer.
+
+Collapsing a repository group or a task's subtasks keeps the other rows visible
+while its page refreshes. Expanding shows already available rows immediately;
+any additional rows appear when the refresh finishes. This also applies in the
+phone **Tasks** drawer and navigation menu.
 
 If loading fails, the sidebar shows one message. **Retry** reloads a recoverable
 failure; rows already shown remain visible during a failed refresh. If a filter
