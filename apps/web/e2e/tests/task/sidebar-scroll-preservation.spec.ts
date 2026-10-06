@@ -351,14 +351,17 @@ test.describe("sidebar scrolling", () => {
     await dialog.getByRole("combobox").fill(targetTask.title);
     const option = dialog.getByRole("option").filter({ hasText: targetTask.title });
     await expect(option).toBeVisible({ timeout: 10_000 });
-    await option.click();
+    // Observe the brief reveal during selection; route hydration can outlast the cue.
+    await Promise.all([
+      expect(targetRow).toHaveClass(/task-sidebar-row-reveal/, { timeout: 1_000 }),
+      option.click(),
+    ]);
 
     await expect(testPage).toHaveURL(new RegExp(`/t/${targetTask.id}$`));
     await expect(session.activeSidebarTaskItem(targetTask.title).first()).toHaveAttribute(
       "aria-current",
       "true",
     );
-    await expect(targetRow).toHaveClass(/task-sidebar-row-reveal/, { timeout: 1_000 });
     await expect
       .poll(
         async () => {
@@ -544,14 +547,17 @@ test.describe("sidebar scrolling", () => {
     await dialog.getByRole("combobox").fill(targetTask.title);
     const option = dialog.getByRole("option").filter({ hasText: targetTask.title });
     await expect(option).toBeVisible({ timeout: 10_000 });
-    await option.click();
+    // Observe the brief reveal during selection; route hydration can outlast the cue.
+    await Promise.all([
+      expect(targetRow).toHaveClass(/task-sidebar-row-reveal/, { timeout: 1_000 }),
+      option.click(),
+    ]);
 
     await expect(testPage).toHaveURL(new RegExp(`/t/${targetTask.id}$`));
     await expect(session.activeSidebarTaskItem(targetTask.title).first()).toHaveAttribute(
       "aria-current",
       "true",
     );
-    await expect(targetRow).toHaveClass(/task-sidebar-row-reveal/, { timeout: 1_000 });
     await expect
       .poll(
         () =>

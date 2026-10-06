@@ -81,3 +81,14 @@ and delayed-blocker desktop regression failed before their respective fixes and 
 - `git diff --check`: passed.
 - Generated E2E output is disposable and excluded from the change; no security or trust-boundary
   changes were introduced.
+
+
+PR #3598 CI follow-up, 2026-10-06: run `37450559149`, shard 11 job
+`112233810114`, exposed an assertion that sampled the 1,400 ms reveal cue
+after waiting for route hydration and active-row settlement. Both reveal
+scenarios now observe the cue concurrently with command selection, before
+checking the destination URL, active identity, viewport containment, and
+unchanged document scroll. The existing one-second cue assertion deadline
+and production cue duration are unchanged.
+
+`cd apps/web && pnpm e2e:run --host --no-build --shards 1 --project chromium tests/task/sidebar-scroll-preservation.spec.ts tests/lsp/lsp-file-intelligence.spec.ts -- --retries 0 --trace=retain-on-failure`: all 27 cases passed in 9.8 minutes, including all eight sidebar-scroll cases, delayed guarded navigation, and above-viewport selection. `cd apps/web && pnpm exec vitest run lib/sidebar/task-navigation.test.ts`: 19 tests passed. Full web lint and typecheck, focused Prettier/ESLint, and whitespace checks passed. No production navigation change or deadline increase; exact pushed-head CI remains pending.

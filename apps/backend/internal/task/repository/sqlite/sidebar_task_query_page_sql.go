@@ -18,11 +18,10 @@ func sidebarPageCTEs(driver string, query models.SidebarTaskViewQuery, prefs mod
 	ctes += sidebarSelectedTreeCTEs(query, page)
 	page.args = append(page.args, page.childArgs...)
 	ctes += sidebarPageResultCTEs(query.Group)
-	ctes += sidebarPageQueueCTEs(driver, page)
 	return ctes, page.args
 }
 
-func sidebarPageQueueCTEs(driver string, page sidebarPageBuildContext) string {
+func sidebarPageQueueCTEs(driver string) string {
 	return `, page_queue_steps AS MATERIALIZED (
 		SELECT DISTINCT task.workspace_id, task.queued_for_step_id
 		FROM page_window page JOIN tasks task ON task.id = page.id
@@ -44,7 +43,7 @@ func sidebarPageQueueCTEs(driver string, page sidebarPageBuildContext) string {
 			AND page_queue_steps.queued_for_step_id = queue_task.queued_for_step_id
 			AND queue_task.workflow_step_id = queue_task.queued_for_step_id
 			AND queue_task.queued_for_step_id <> ''
-			AND ` + page.wipAdmittedFalse + `
+			AND COALESCE(queue_task.wip_admitted, 0) = 0
 			AND COALESCE(queue_task.is_ephemeral, 0) = 0
 			AND COALESCE(queue_task.origin, '') <> 'automation_run'
 			AND ` + excludeConfigModePredicate(driver, "queue_task.metadata") + `
@@ -154,14 +153,14 @@ func sidebarPageTreeCTEs(page sidebarPageBuildContext) string {
 }
 
 type sidebarPageBuildContext struct {
-	groupOrder, rootPathPart, childPathPart                  string
-	rootPinExpr                                              string
-	cycleProbeGuard                                          string
-	wipAdmittedFalse, order, rootOrder, groupKey, groupLabel string
-	stateJoin, stateCTEs                                     string
-	ancestorCTEs, activityCTEs, activityJoin                 string
-	repositoryCTEs, repositoryJoin                           string
-	args, childArgs                                          []any
+	groupOrder, rootPathPart, childPathPart  string
+	rootPinExpr                              string
+	cycleProbeGuard                          string
+	order, rootOrder, groupKey, groupLabel   string
+	stateJoin, stateCTEs                     string
+	ancestorCTEs, activityCTEs, activityJoin string
+	repositoryCTEs, repositoryJoin           string
+	args, childArgs                          []any
 }
 
 func sidebarPageBuildContextFor(driver string, query models.SidebarTaskViewQuery, prefs models.SidebarTaskViewPreferences) sidebarPageBuildContext {
@@ -178,7 +177,6 @@ func sidebarPageBuildContextFor(driver string, query models.SidebarTaskViewQuery
 		rootPathPart = `LPAD(CAST(root.display_root_order AS TEXT), 10, '0')`
 		childPathPart = `LPAD(CAST(child.sibling_order AS TEXT), 10, '0')`
 	}
-	wipAdmittedFalse := `COALESCE(queue_task.wip_admitted, 0) = 0`
 	canonicalOrder := sortExpr + `, v.updated_at DESC, ` + taskTitleOrder(driver, "v.", "ASC") + `, v.id ASC`
 	rootOrder := canonicalOrder
 	rootPinExpr := pinExpr
@@ -215,9 +213,9 @@ func sidebarPageBuildContextFor(driver string, query models.SidebarTaskViewQuery
 	activityCTEs, activityJoin := sidebarActivityCTEs(query)
 	return sidebarPageBuildContext{
 		groupOrder: groupOrder, rootPathPart: rootPathPart, childPathPart: childPathPart,
-		rootPinExpr:      rootPinExpr,
-		cycleProbeGuard:  cycleProbeGuard,
-		wipAdmittedFalse: wipAdmittedFalse, order: order, rootOrder: rootOrder, groupKey: groupKey, groupLabel: groupLabel,
+		rootPinExpr:     rootPinExpr,
+		cycleProbeGuard: cycleProbeGuard,
+		order:           order, rootOrder: rootOrder, groupKey: groupKey, groupLabel: groupLabel,
 		stateJoin: stateJoin, stateCTEs: stateCTEs,
 		repositoryCTEs: repositoryCTEs, repositoryJoin: repositoryJoin,
 		ancestorCTEs: sidebarAncestorCTE(driver, query), activityCTEs: activityCTEs, activityJoin: activityJoin, args: args, childArgs: childArgs,

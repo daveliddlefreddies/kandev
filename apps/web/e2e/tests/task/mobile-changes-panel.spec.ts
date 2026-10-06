@@ -16,7 +16,19 @@ async function openMobileChangesPanel(testPage: Page) {
 
 async function expandSection(testPage: Page, sectionTestId: string, timeout = 10_000) {
   const toggle = testPage.getByTestId(`${sectionTestId}-collapse-toggle`);
-  await expect(toggle).toBeVisible({ timeout });
+  await expect
+    .poll(
+      async () => {
+        if (!(await toggle.isVisible())) {
+          await testPage.getByTestId("changes-panel-scroll-owner").evaluate((element) => {
+            element.scrollTop = 0;
+          });
+        }
+        return toggle.isVisible();
+      },
+      { timeout },
+    )
+    .toBe(true);
   // Mirror session-page expandChangesSection: late defaultCollapsed resyncs
   // can re-collapse after the first tap, so retry until expanded sticks.
   await expect
@@ -74,7 +86,7 @@ async function expectDiffTextAbsent(testPage: Page, text: string, timeout = 10_0
 }
 
 test.describe("Mobile changes panel", () => {
-  test.describe.configure({ retries: 1, timeout: 120_000 });
+  test.describe.configure({ timeout: 120_000 });
 
   test.afterEach(async ({ backend }, testInfo) => {
     if (testInfo.status === testInfo.expectedStatus) return;
@@ -305,8 +317,16 @@ test.describe("Mobile changes panel", () => {
       await session.waitForLoad();
       await session.waitForChatIdle();
       await openMobileChangesPanel(testPage);
-      await expandSection(testPage, "unstaged-files-section", 20_000);
       const scrollOwner = testPage.getByTestId("changes-panel-scroll-owner");
+      // A hydrated timeline can preserve a viewport below its virtualized heading.
+      await expect
+        .poll(() => scrollOwner.evaluate((element) => element.scrollHeight > element.clientHeight))
+        .toBe(true);
+      await scrollOwner.evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      await expect(testPage.getByTestId("unstaged-files-section-collapse-toggle")).toHaveCount(0);
+      await expandSection(testPage, "unstaged-files-section", 20_000);
       await expect
         .poll(() => scrollOwner.evaluate((element) => element.scrollHeight > element.clientHeight))
         .toBe(true);
