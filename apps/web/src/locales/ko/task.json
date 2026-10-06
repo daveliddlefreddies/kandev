@@ -2635,5 +2635,8 @@
   "durableDeliveryReconnecting": "에이전트에 다시 연결하는 중입니다. 프롬프트는 다시 전송되지 않습니다.",
   "durableDeliveryUncertain": "전송이 중단되었습니다. 프롬프트 결과를 확인할 수 없습니다.",
   "retryConnection": "연결 다시 시도",
-  "retryingConnection": "연결 다시 시도 중..."
+  "retryingConnection": "연결 다시 시도 중...",
+  "forwardedPorts": "전달 중인 포트",
+  "forwarding": "전달 중",
+  "otherPorts": "다른 포트"
 }
