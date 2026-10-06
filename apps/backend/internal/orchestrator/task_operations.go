@@ -1134,6 +1134,8 @@ func (s *Service) wrapCreatedSessionPrompt(
 			s.WorkflowStepRequiresCompletionSignal(ctx, dbTask.WorkflowStepID),
 			referenceContext, promptReferenceContext, pullRequestTargetContext,
 		)
+	case dbTask.Origin == models.TaskOriginCoordinator:
+		return s.wrapCoordinatorStandingInstructions(ctx, prompt, dbTask)
 	default:
 		return sysprompt.InjectKandevContextWithOptions(taskID, sessionID, prompt, sysprompt.KandevContextOptions{
 			RequiresCompletionSignal:       s.WorkflowStepRequiresCompletionSignal(ctx, dbTask.WorkflowStepID),
@@ -4662,6 +4664,11 @@ const (
 	autoResumeBlockedLaunchQueued         = "launch_queued"
 	autoResumeBlockedOwnershipUnavailable = "ownership_unavailable"
 	autoResumeBlockedDynamicRoute         = "dynamic_route_pending"
+	// autoResumeBlockedCoordinatorMessageOnly blocks passive/startup/reconnect
+	// resume of a coordinator conversation task
+	// (docs/specs/coordinator/system-design/copilot.md#attended-only): the
+	// session may only be resumed by a manager's message.add turn start.
+	autoResumeBlockedCoordinatorMessageOnly = "coordinator_message_only"
 )
 
 func (s *Service) sessionOpenRecoveryBlockReason(
@@ -4694,6 +4701,9 @@ func (s *Service) autoResumeEligibility(
 ) (bool, string) {
 	if session == nil || task == nil {
 		return false, autoResumeBlockedOwnershipUnavailable
+	}
+	if task.Origin == models.TaskOriginCoordinator {
+		return false, autoResumeBlockedCoordinatorMessageOnly
 	}
 	if session.RouteState != "" && session.RouteState != dynamicRouteStatusActive {
 		return false, autoResumeBlockedDynamicRoute
@@ -7341,16 +7351,20 @@ func (s *Service) validatePromptTaskStart(sessionID string) error {
 	return nil
 }
 
-// validatePromptTaskPreconditions combines promptTask's two top-of-function
-// checks: the ordinary session/reset-in-progress validation, and — for a
-// compound resume passing its own cancellable attempt context — an early
-// ownership check so a lost race surfaces its typed error before any
-// repository read can observe the cancellation as a generic context error.
+// validatePromptTaskPreconditions checks session/reset state, resume ownership,
+// and runtime availability before admission. A lost resume race keeps its typed
+// error even when the attempt context is already cancelled.
 func (s *Service) validatePromptTaskPreconditions(sessionID string, resumeAttempt *resumeAttempt) error {
 	if err := s.validatePromptTaskStart(sessionID); err != nil {
 		return err
 	}
-	return s.validateResumeAttempt(resumeAttempt)
+	if err := s.validateResumeAttempt(resumeAttempt); err != nil {
+		return err
+	}
+	if s.executor == nil {
+		return errors.New("prompt: executor is not configured")
+	}
+	return nil
 }
 
 func (s *Service) logPromptTaskCall(

@@ -10,6 +10,8 @@ import {
   waitForSessionSettledBaseline,
 } from "./quick-chat-helpers";
 
+test.use({ trace: "retain-on-failure" });
+
 async function openMobileQuickChat(page: Page): Promise<Locator> {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
@@ -23,6 +25,14 @@ async function openMobileQuickChat(page: Page): Promise<Locator> {
 test.describe("mobile agent goal visibility", () => {
   test.describe.configure({ retries: 0 });
 
+  test.afterEach(async ({ backend }, testInfo) => {
+    if (testInfo.status === testInfo.expectedStatus) return;
+    await testInfo.attach("mobile-agent-goal-backend.log", {
+      path: backend.logPath,
+      contentType: "text/plain",
+    });
+  });
+
   test("submits once while the message acknowledgement is delayed", async ({
     testPage,
     apiClient,
@@ -31,10 +41,10 @@ test.describe("mobile agent goal visibility", () => {
     const dialog = await openMobileQuickChat(testPage);
     const started = await startQuickChatFromSetup(dialog, testPage);
     await waitForSessionSettledBaseline(apiClient, started.task_id, started.session_id);
-    await waitForQuickChatDirectInput(dialog);
     await expect(
-      dialog.getByText("Please get ready for my next question.", { exact: false }).first(),
-    ).toBeVisible();
+      dialog.getByText("I've completed the analysis of your request:", { exact: false }).last(),
+    ).toBeVisible({ timeout: 30_000 });
+    await waitForQuickChatDirectInput(dialog);
     // The opening prompt can be carried by launch for passthrough profiles or
     // by message.add for structured profiles. The persisted settled state above
     // is the baseline; this test measures only the following user submission.
@@ -47,6 +57,14 @@ test.describe("mobile agent goal visibility", () => {
     await expect
       .poll(() => proxy.requestCount("message.add"), { timeout: 15_000 })
       .toBe(openingMessageRequestCount + 1);
+    // Admission acknowledgement does not mean the provider has executed the message.
+    await expect(
+      dialog
+        .getByText("The provider goal remains active after the thread becomes idle.", {
+          exact: false,
+        })
+        .last(),
+    ).toBeVisible({ timeout: 30_000 });
     await expect(dialog.getByTestId("agent-goal-chip")).toBeVisible();
   });
 

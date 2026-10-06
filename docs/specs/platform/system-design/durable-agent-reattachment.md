@@ -81,6 +81,8 @@ Existing blocks without verifiable binding remain open; migrate only when durabl
 Never attach an old ambiguous block to whichever submission happens to be active now.
 
 After ordered terminal projection, reconcile the authoritative submission state and queue claim through existing guards.
+
+Ordinary chat completion performs session side effects under the admission guard, then releases that guard before a synchronous Git snapshot. The snapshot still finishes before the handler returns and cannot change a successor's session state. Office and automation capture before their settlement can tear down the runtime. Prompt admission rejects an unconfigured executor before claiming a turn or changing session state.
 Resolve the matching block with compare-and-set on block identity, reason, submission, incarnation, and generation.
 Idempotent duplicate settlement returns success without repeated workflow or queue effects.
 Terminal projection may finish before the prompt RPC returns. Its completion handler must preserve the matching submission's recorded terminal outcome instead of requiring it to remain dispatching or creating a new delivery recovery block.

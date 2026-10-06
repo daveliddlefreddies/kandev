@@ -17,6 +17,7 @@ import (
 	"github.com/kandev/kandev/internal/automation"
 	"github.com/kandev/kandev/internal/common/logger"
 	"github.com/kandev/kandev/internal/common/processidentity"
+	"github.com/kandev/kandev/internal/coordinator"
 	"github.com/kandev/kandev/internal/events"
 	"github.com/kandev/kandev/internal/events/bus"
 	"github.com/kandev/kandev/internal/github"
@@ -45,6 +46,7 @@ func registerE2EResetRoutes(
 	automationSvc *automation.Service,
 	githubSvc *github.Service,
 	gitlabSvc *gitlab.Service,
+	coordinatorSvc *coordinator.Service,
 	eventBus bus.EventBus,
 	agentRuntimeAvailability *agentruntime.RuntimeOwner,
 	lifecycleMgr agentruntime.SessionExecutionControl,
@@ -62,7 +64,7 @@ func registerE2EResetRoutes(
 	if os.Getenv("KANDEV_E2E_MOCK") == "true" && lifecycleMgr != nil {
 		api.POST("/agent-runtime/disconnect-session-stream", handleE2EDisconnectSessionAgentStream(lifecycleMgr))
 	}
-	api.DELETE("/reset/:workspaceId", handleE2EReset(repo, taskSvc, automationSvc, githubSvc, gitlabSvc, log))
+	api.DELETE("/reset/:workspaceId", handleE2EReset(repo, taskSvc, automationSvc, githubSvc, gitlabSvc, coordinatorSvc, log))
 	if githubSvc != nil {
 		api.POST("/tasks/:id/remote-contribution", handleE2EAttachGitHubContribution(repo, taskSvc, githubSvc, log))
 	}
@@ -254,6 +256,7 @@ func handleE2EReset(
 	automationSvc *automation.Service,
 	githubSvc *github.Service,
 	gitlabSvc *gitlab.Service,
+	coordinatorSvc *coordinator.Service,
 	log *logger.Logger,
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -302,6 +305,19 @@ func handleE2EReset(
 		}
 		if _, err := repo.DB().ExecContext(ctx, `DELETE FROM runtime_flag_overrides`); err != nil {
 			log.Warn("e2e reset: runtime flag override cleanup failed", zap.Error(err))
+		}
+		// Coordinator state (coordinators, proposals, stalls) is keyed by
+		// workspace_id, not task_id, so it outlives a reset's task deletion
+		// the same way review watches and routing state do. Without this,
+		// every coordinator e2e spec sharing the worker-scoped
+		// seedData.workspaceId leaks its coordinators/stalls/proposals into
+		// the next spec. coordinatorSvc is nil when features.coordinator is
+		// disabled (prod/dev profiles never register this endpoint's mock
+		// mode with the feature off, but guard anyway).
+		if err := deleteCoordinatorStateForReset(ctx, coordinatorSvc, workspaceID); err != nil {
+			log.Error("e2e reset: coordinator state cleanup failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{errKey: "coordinator state cleanup failed"})
+			return
 		}
 		// Repository sets outlive the tasks a reset removes, so a set seeded by
 		// one spec would still be offered in the next spec's create dialog. The
@@ -759,6 +775,17 @@ func deleteAutomationsForReset(
 		return 0, nil
 	}
 	return automationSvc.DeleteAutomationsByWorkspace(ctx, workspaceID)
+}
+
+func deleteCoordinatorStateForReset(
+	ctx context.Context,
+	coordinatorSvc *coordinator.Service,
+	workspaceID string,
+) error {
+	if coordinatorSvc == nil {
+		return nil
+	}
+	return coordinatorSvc.DeleteWorkspaceState(ctx, workspaceID)
 }
 
 type e2eHiddenWorkflowRequest struct {

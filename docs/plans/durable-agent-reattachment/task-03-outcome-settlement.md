@@ -102,6 +102,16 @@ Concurrent old events and new ownership can race settlement or cleanup. Use immu
 
 ## Results
 
+### Completion admission remediation, 2026-10-06
+
+- `TestPromptTaskWithoutExecutorLeavesSessionUnchanged` reproduced a nil-executor panic before the fix. Prompt admission now rejects the missing runtime before claiming a turn or changing session state. Its race regression passed.
+- `TestCompleteStreamGitSnapshotDoesNotHoldPromptAdmission` reproduced completion holding the session guard during a blocked Git read. Ordinary chats now finish guarded settlement and release admission before the synchronous snapshot. The test passed and checks that the snapshot finishes before handler return and cannot overwrite a successor's RUNNING state. Office and automation retain capture before runtime teardown.
+- Passed `go test -race -tags sqlite_fts5 ./internal/orchestrator -run '^TestCompleteStreamGitSnapshotDoesNotHoldPromptAdmission$|^TestPromptTaskWithoutExecutorLeavesSessionUnchanged$' -count=1` and `go test -race -tags sqlite_fts5 ./internal/orchestrator -run 'TestPromptTask|Test.*RecoveryBlock|TestQueueAndInterruptForPeerMessage' -count=1`.
+- The Office terminal fixture waits for its asynchronous stop before checking the exact count. The boot simulator's one-shot readiness signal tolerates repeated start calls while preserving launch and prompt assertions. Both focused race cases passed ten repetitions each.
+- Passed the full `go test -race -tags sqlite_fts5 ./internal/orchestrator -count=1` suite (292.829 seconds). Latest-main integration and hosted checks remain pending. PostgreSQL and native Windows/macOS containment evidence remain separate release requirements.
+- Passed `go test -race -tags sqlite_fts5 ./internal/orchestrator -run '^TestCompleteStreamGitSnapshot|^TestPromptTaskWithoutExecutorLeavesSessionUnchanged$' -count=1`, including snapshot persistence before Office stop. `golangci-lint run ./internal/orchestrator/... --allow-serial-runners --timeout=5m` passed with zero issues. Backend and plugin-package builds passed.
+- Passed `pnpm e2e:run --host --no-build --project mobile-chrome -- tests/chat/mobile-agent-goal.spec.ts --retries=0` (two cases, 52.9 seconds) and `pnpm e2e:run --host --no-build --project chromium -- tests/chat/quick-chat-cancel-palette.spec.ts tests/task/file-tree-download.spec.ts --retries=0` (five cases, two minutes). No retry was exercised. A deterministic WebSocket barrier preserves cancellation-pending UI assertions when native acknowledgement clears pending within milliseconds, releases all buffered frames, and then verifies final settlement. No cancellation behavior, deadline, or assertion was relaxed.
+
 Completed 2026-09-28.
 
 - Delivery recovery records bind the original submission to its session, execution, incarnation, harness generation, stream, and turn identity. Terminal settlement uses durable intent plus repository compare-and-set, clears only the exact matching delivery block, and preserves unrelated recovery causes. Unbound legacy records remain blocked.

@@ -97,7 +97,8 @@
     "azure-devops",
     "workflow-sync",
     "office-config-sync",
-    "automation"
+    "automation",
+    "coordinator"
   ],
   "known_missing_required_tables": {
     "task": [

@@ -8,6 +8,7 @@ import {
   waitForActiveSessionForegroundActivity,
 } from "../../helpers/session-store";
 import { seedRunningGeneratingSession } from "../../helpers/generating-session";
+import { holdCancellationSettlement } from "../../helpers/cancellation-observation";
 import {
   openQuickChatWithAgent,
   sendQuickChatMessage,
@@ -62,6 +63,7 @@ test.describe.serial("Quick Chat cancellation palette and composer", () => {
 
   test("cancels Quick Chat while detached background work runs", async ({ testPage }) => {
     test.setTimeout(120_000);
+    const cancellation = await holdCancellationSettlement(testPage);
     const quickChat = await openQuickChatWithAgent(testPage);
     await sendQuickChatMessage(quickChat, testPage, "/detached-background 60s");
 
@@ -85,9 +87,14 @@ test.describe.serial("Quick Chat cancellation palette and composer", () => {
     const cancel = quickChat.getByTestId("cancel-agent-button");
     await expect(cancel).toBeVisible();
 
-    await cancel.click();
-    await waitForQuickChatCancellationPending(testPage, quickSessionId, true);
-    await expect(cancel).toBeDisabled();
+    cancellation.arm(quickSessionId);
+    try {
+      await cancel.click();
+      await waitForQuickChatCancellationPending(testPage, quickSessionId, true);
+      await expect(cancel).toBeDisabled();
+    } finally {
+      cancellation.release();
+    }
     await waitForQuickChatSessionSettled(testPage, quickSessionId, 75_000);
     await expect(cancel).not.toBeVisible({ timeout: 15_000 });
   });

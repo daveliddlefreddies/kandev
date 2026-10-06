@@ -3306,14 +3306,18 @@ func (s *Service) handleCompleteStreamEventWithGuardRelease(
 	// After turn completion the poll mode can drop to slow (30s) if the user
 	// navigates away, so the cached value could stay stale for a long time.
 	//
-	// This runs BEFORE the RUNNING-state guard so it fires regardless of which
-	// event (READY vs COMPLETE) will drive the session state transition.
-	//
-	// Capture synchronously so the snapshot is persisted before the handler
-	// returns. Running async risks the backend being killed (e.g. E2E restart)
-	// before the snapshot is written. Retries handle transient git lock
-	// contention between concurrent worktrees.
-	s.captureCompleteEventGitStatus(ctx, payload.SessionID)
+	// Ordinary chats release prompt admission after guarded settlement, then
+	// capture synchronously before returning. Office and automation capture
+	// before settlement can tear down the runtime. Every path captures even
+	// when READY owns the state transition; retries cover transient Git locks.
+	if s.completeEventRetainsRuntime(ctx, payload.TaskID) {
+		defer func() {
+			streamGuard.unlock()
+			s.captureCompleteEventGitStatus(ctx, payload.SessionID)
+		}()
+	} else {
+		s.captureCompleteEventGitStatus(ctx, payload.SessionID)
+	}
 
 	// Office sessions park at IDLE between scheduler runs; cancelled turns skip that path so the session stays promptable.
 	if s.reconcileCompleteEventRuntime(ctx, payload, session, completionTurnID) {
@@ -3418,6 +3422,14 @@ func (s *Service) captureCompleteEventGitStatus(ctx context.Context, sessionID s
 	if sessionID != "" {
 		s.captureGitStatusSnapshotWithRetry(ctx, sessionID)
 	}
+}
+
+func (s *Service) completeEventRetainsRuntime(ctx context.Context, taskID string) bool {
+	task, err := s.repo.GetTask(ctx, taskID)
+	if err != nil || task == nil {
+		return false
+	}
+	return !task.IsFromOffice && task.Origin != models.TaskOriginAutomationTask && task.Origin != models.TaskOriginAutomationRun
 }
 
 func (s *Service) reconcileCompleteEventRuntime(
