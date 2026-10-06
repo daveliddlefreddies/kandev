@@ -114,3 +114,22 @@ rejected the obsolete field on `73a04b32bb4`; the exact local coverage
 preflight failed with that field and passed after migration across all 50
 changed work orders. This metadata correction changes no implementation scope
 or product behavior.
+
+### CI follow-up: observe the complete reveal transition
+
+The browser shard failed because its one-second class assertion began before
+command selection completed. The fixture now installs a narrowly scoped DOM
+observer before selection and records the target row's actual reveal class.
+Route, active identity, viewport containment, and document-scroll assertions
+remain unchanged. Observation disconnects and its handle is disposed on exit.
+
+Validation used the managed runner from the repository root:
+`TMPDIR=/root/.cache/kandev-pr3598-e2e-tmp GOMAXPROCS=4 scripts/run-quiet e2e --summary -- pnpm --dir apps/web e2e:run --host --no-build --project chromium e2e/tests/task/sidebar-scroll-preservation.spec.ts -- --repeat-each=3 --retries=0 --trace=retain-on-failure`.
+All 24 cases passed. The phone command-navigation case passed three independent
+runs with retries disabled. Focused ESLint and web typecheck passed.
+
+A temporary 1.5-second option animation reproduced the original failure; the
+observer passed under the same delay. A temporary negative probe suppressed
+only the reveal class and failed after route, identity, and viewport assertions
+passed. Both probes were removed. Production timing and navigation are unchanged.
+Fresh pushed-head CI remains required.

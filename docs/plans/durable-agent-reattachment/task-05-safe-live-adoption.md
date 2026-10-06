@@ -990,3 +990,52 @@ gates remain open.
 - `golangci-lint run ./... --allow-serial-runners
   --new-from-rev=7d55a599502530501f9308c21cb63f9c64d06ac8 --timeout=10m`
   passed with zero issues.
+
+### CI follow-up: portal focus ownership
+
+The current browser check reproduces a model picker closing after selection.
+A bounded browser focus trace proves that the option's mouse-down bubbles
+through React to the session panel although its DOM node is in a portal outside
+the panel. The panel then focuses itself, causing Radix to dismiss the picker.
+Persisted opening-turn readiness alone did not repair this failure.
+
+Repair scope: the existing shared panel mouse-down/click router must only
+claim non-interactive targets physically contained in its current panel. Keep
+normal transcript focus, controls, deferred Quick Chat focus, model changes,
+and picker-close policy unchanged. Extend the existing router unit test with
+a real portal DOM target, run it RED before the containment guard, and prove
+GREEN afterward. Re-run the actual desktop picker scenario and its phone
+counterpart with no retries, plus shared router/control tests, lint and types.
+No new UI composition or copy is needed; phone model settings retain their
+existing entry point and overlay. Fresh pushed-head CI remains a delivery gate.
+
+The router unit regression failed on unwanted panel focus before the guard.
+`pnpm --dir apps/web exec vitest run components/task/chat/route-panel-mouse-down.test.ts components/task/chat/clarification-custom-input.test.tsx components/model-config-selector.test.tsx components/task/model-selector-consecutive-switch.test.tsx`
+then passed all 53 tests. The two persistence fixtures now also wait for their
+exact session's persisted opening response and WAITING_FOR_INPUT state before
+changing configuration. The picker check additionally confirms the saved
+model while requiring the same effort control to remain visible.
+
+Parent-head hosted validation is historical: all backend checks, including
+PostgreSQL 16/18 and the uncached Windows process job, passed at `48f19138`.
+The Windows process step completed normally in 24m46s and emitted final package
+PASS records. These checks do not substitute for the next pushed head or close
+manual native containment and live-harness release gates. No public docs
+change is required for this repair to existing focus and picker behavior.
+
+Rebuilt browser validation passed all nine cases (three independent runs of
+each changed model scenario):
+`TMPDIR=/root/.cache/kandev-pr3598-e2e-tmp GOMAXPROCS=4 scripts/run-quiet e2e --summary -- pnpm --dir apps/web e2e:run --host --project chromium e2e/tests/chat/model-selector-error.spec.ts -- --grep 'agent tab keeps|changed values stay|stays open after' --repeat-each=3 --retries=0 --trace=retain-on-failure`.
+The rebuild included backend, web E2E assets and the fixture plugin. Web
+typecheck including the new phone test and focused ESLint passed. Catalog
+validation, full specification lint, and all 36 linter tests passed; local
+documentation coverage accepted 55 changed work orders against current main.
+
+Phone validation passed all six cases with no retries:
+`TMPDIR=/root/.cache/kandev-pr3598-e2e-tmp GOMAXPROCS=4 scripts/run-quiet e2e --summary -- pnpm --dir apps/web e2e:run --host --no-build --project mobile-chrome e2e/tests/chat/mobile-model-selector.spec.ts -- --repeat-each=3 --retries=0 --trace=retain-on-failure`.
+The new native touch case verifies saved model identity, continued picker
+visibility, and entry into the effort submenu. The existing long-menu and
+provider-description touch case also passed three times. The old per-suite
+retry override was removed so the runner's retry policy applies. No temporary
+focus probe remains. Fresh pushed-head CI and advanced-base compatibility are
+still required; manual release gates retain their existing status.

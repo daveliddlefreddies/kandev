@@ -1,5 +1,23 @@
+import type { ApiClient } from "../../helpers/api-client";
+import { waitForAgentMessage, waitForSessionState } from "../../helpers/session";
 import { test, expect } from "../../fixtures/test-base";
 import { SessionPage } from "../../pages/session-page";
+
+async function waitForOpeningModelTurn(apiClient: ApiClient, taskId: string, sessionId: string) {
+  await waitForAgentMessage(
+    apiClient,
+    sessionId,
+    "This is a simple mock response for e2e testing.",
+    30_000,
+  );
+  await waitForSessionState(apiClient, {
+    taskId,
+    sessionId,
+    expectedState: "WAITING_FOR_INPUT",
+    timeout: 30_000,
+    message: "initial model-selector turn must settle before interaction",
+  });
+}
 
 /**
  * Verifies the chat-input model selector's failure path:
@@ -197,6 +215,8 @@ test.describe("Chat model selector — persistence", () => {
       },
     );
     if (!task.session_id) throw new Error("expected an auto-started session");
+
+    await waitForOpeningModelTurn(apiClient, task.id, task.session_id);
 
     await testPage.goto(`/t/${task.id}`);
     const session = new SessionPage(testPage);
@@ -407,6 +427,9 @@ test.describe("Chat model selector — persistence", () => {
       },
     );
 
+    if (!task.session_id) throw new Error("expected an auto-started session");
+    await waitForOpeningModelTurn(apiClient, task.id, task.session_id);
+
     await testPage.goto(`/t/${task.id}`);
 
     const session = new SessionPage(testPage);
@@ -531,6 +554,9 @@ test.describe("Chat model selector — popover open/close behavior", () => {
       },
     );
 
+    if (!task.session_id) throw new Error("model selector task has no session identity");
+    await waitForOpeningModelTurn(apiClient, task.id, task.session_id);
+
     await testPage.goto(`/t/${task.id}`);
 
     const session = new SessionPage(testPage);
@@ -548,9 +574,18 @@ test.describe("Chat model selector — popover open/close behavior", () => {
 
     await testPage.getByRole("option", { name: /Mock Smart/ }).click();
 
-    // The trigger label updates optimistically — wait for that so we know the
-    // selection round-tripped through the handler.
     await expect(trigger).toContainText("Mock Smart", { timeout: 5_000 });
+    await expect
+      .poll(
+        async () => {
+          const { sessions } = await apiClient.listTaskSessions(task.id);
+          const runtime = sessions.find((candidate) => candidate.id === task.session_id)?.metadata
+            ?.runtime_config as { model?: string } | undefined;
+          return runtime?.model;
+        },
+        { timeout: 5_000 },
+      )
+      .toBe("mock-smart");
 
     // Popover must still be open so the user can also pick an effort level
     // without re-opening. The effort row is rendered only while PopoverContent
