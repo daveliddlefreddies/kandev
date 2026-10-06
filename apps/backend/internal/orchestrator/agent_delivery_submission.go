@@ -67,7 +67,15 @@ func (r *agentDeliverySubmissionRuntime) markCompleted(ctx context.Context) erro
 		return err
 	}
 	if !changed {
-		return fmt.Errorf("delivery submission %q was not dispatching", r.id)
+		// Terminal projection can settle the submission before the prompt RPC
+		// returns. Preserve that outcome instead of creating a recovery block.
+		stored, readErr := r.store.GetAgentDeliverySubmission(ctx, r.id)
+		if readErr != nil {
+			return fmt.Errorf("read delivery submission after completion race: %w", readErr)
+		}
+		if stored == nil || stored.SessionID != r.sessionID || !terminalDeliverySubmission(stored.State) {
+			return fmt.Errorf("delivery submission %q was not dispatching", r.id)
+		}
 	}
 	r.completed = true
 	return nil

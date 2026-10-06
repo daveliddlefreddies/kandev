@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	agentruntime "github.com/kandev/kandev/internal/agent/runtime"
 	"github.com/kandev/kandev/internal/agent/runtime/lifecycle"
@@ -293,5 +294,59 @@ func TestPrepareAgentDeliverySubmissionRejectsRotatedContinuationGeneration(t *t
 	}
 	if _, err := repo.GetAgentDeliverySubmission(ctx, "prompt:continuation"); err == nil {
 		t.Fatal("rotated continuation unexpectedly created a durable submission")
+	}
+}
+
+func TestDeliveryCompletionAfterTerminalProjection(t *testing.T) {
+	for _, state := range []models.DeliverySubmissionState{
+		models.DeliverySubmissionCompleted, models.DeliverySubmissionCancelled,
+		models.DeliverySubmissionFailed, models.DeliverySubmissionInterruptedUnknown,
+		models.DeliverySubmissionAccepted,
+	} {
+		t.Run(string(state), func(t *testing.T) {
+			ctx := context.Background()
+			repo := setupTestRepo(t)
+			seedSession(t, repo, "task-terminal-first", "session-terminal-first", "step-1")
+			now := time.Now().UTC()
+			submission := &models.AgentDeliverySubmission{
+				ID: "prompt:terminal-first", SessionID: "session-terminal-first",
+				IncarnationID: "session-terminal-first", HarnessGeneration: 1, OwnerGeneration: 1,
+				DispatchAttemptID: "terminal-first", PayloadHash: "hash", Payload: []byte("prompt"),
+				State: models.DeliverySubmissionDispatching, CreatedAt: now, UpdatedAt: now,
+			}
+			if _, err := repo.PrepareAgentDeliverySubmission(ctx, submission); err != nil {
+				t.Fatal(err)
+			}
+			changed, err := repo.TransitionAgentDeliverySubmission(ctx, submission.ID,
+				models.DeliverySubmissionDispatching, state, "projected outcome", now)
+			if err != nil || !changed {
+				t.Fatalf("project terminal: changed=%v, err=%v", changed, err)
+			}
+			runtime := &agentDeliverySubmissionRuntime{store: repo, id: submission.ID, sessionID: submission.SessionID}
+			err = runtime.markCompleted(ctx)
+			terminal := state == models.DeliverySubmissionCompleted || state == models.DeliverySubmissionCancelled || state == models.DeliverySubmissionFailed
+			if terminal && err != nil {
+				t.Fatalf("already settled completion: %v", err)
+			}
+			if !terminal && err == nil {
+				t.Fatal("unresolved submission unexpectedly treated as completed")
+			}
+			stored, err := repo.GetAgentDeliverySubmission(ctx, submission.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stored.State != state || stored.Outcome != "projected outcome" {
+				t.Fatalf("projected outcome overwritten: %#v", stored)
+			}
+			if runtime.completed != terminal {
+				t.Fatalf("completed=%v, want %v", runtime.completed, terminal)
+			}
+			if terminal {
+				wrongOwner := &agentDeliverySubmissionRuntime{store: repo, id: submission.ID, sessionID: "another-session"}
+				if err := wrongOwner.markCompleted(ctx); err == nil {
+					t.Fatal("terminal outcome from another session was accepted")
+				}
+			}
+		})
 	}
 }

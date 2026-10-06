@@ -849,9 +849,10 @@ test.describe("Transcript auto-scroll toggle", () => {
     // Genuinely new content arrives now, after the remount, while still disabled.
     await sessionAfter.sendMessage('e2e:message("New content after remount while disabled")');
     await expect(
-      sessionAfter.chat.getByText("New content after remount while disabled").last(),
+      sessionAfter.chat.getByText("New content after remount while disabled", { exact: true }),
     ).toBeVisible({ timeout: 15_000 });
 
+    await sessionAfter.waitForChatIdle({ timeout: 30_000 });
     const listAfter = chatList(testPage);
     await toggleAfter.click();
     await expect(toggleAfter).toHaveAttribute("aria-pressed", "true");

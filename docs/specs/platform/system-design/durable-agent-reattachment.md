@@ -83,6 +83,8 @@ Never attach an old ambiguous block to whichever submission happens to be active
 After ordered terminal projection, reconcile the authoritative submission state and queue claim through existing guards.
 Resolve the matching block with compare-and-set on block identity, reason, submission, incarnation, and generation.
 Idempotent duplicate settlement returns success without repeated workflow or queue effects.
+Terminal projection may finish before the prompt RPC returns. Its completion handler must preserve the matching submission's recorded terminal outcome instead of requiring it to remain dispatching or creating a new delivery recovery block.
+An unreadable, unresolved, or mismatched submission still fails closed.
 Do not use the broad manual recovery resolver as an unconditional automatic unblock operation.
 Other native-state, configuration, authorization, workspace, runtime-loss, and operator-required blocks remain effective.
 If the existing single-open-block shape coalesces causes, preserve every cause before enabling automatic settlement.
