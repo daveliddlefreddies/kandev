@@ -102,6 +102,13 @@ func (d *SubmissionDelivery) prepareDispatch(ctx context.Context, id string) (jo
 }
 
 func (d *SubmissionDelivery) handleDispatchError(ctx context.Context, id string, dispatchErr error) (journal.Submission, error) {
+	submission, err := d.Journal.GetSubmission(ctx, id)
+	if err != nil {
+		return journal.Submission{}, errors.Join(ErrSubmissionUncertain, err)
+	}
+	if submission.State == journal.SubmissionCompleted && submission.TerminalEventRetained {
+		return submission, nil
+	}
 	if isKnownSubmissionFailure(dispatchErr) {
 		failed, transitionErr := d.Journal.TransitionSubmission(ctx, id, journal.SubmissionFailed, d.now())
 		if transitionErr != nil {

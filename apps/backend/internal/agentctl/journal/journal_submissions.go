@@ -246,12 +246,12 @@ func countStreamSubmissions(bucket *bolt.Bucket, streamID string) (int, error) {
 	return count, err
 }
 
-func markSubmissionTerminalTx(ctx context.Context, tx *bolt.Tx, id string, sequence uint64, maxJournalBytes int64) error {
+func markSubmissionTerminalTx(ctx context.Context, tx *bolt.Tx, event Event, maxJournalBytes int64) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	bucket := tx.Bucket(bucketSubmissions)
-	raw := bucket.Get([]byte(id))
+	raw := bucket.Get([]byte(event.SubmissionID))
 	if raw == nil {
 		return ErrSubmissionNotFound
 	}
@@ -259,14 +259,22 @@ func markSubmissionTerminalTx(ctx context.Context, tx *bolt.Tx, id string, seque
 	if err := json.Unmarshal(raw, &submission); err != nil {
 		return ErrJournalCorrupt
 	}
+	if !submissionOwnsTerminal(submission, event) {
+		return ErrOwnerMismatch
+	}
 	if submission.TerminalEventRetained {
-		if submission.TerminalSequence != sequence {
+		if submission.TerminalSequence != event.Sequence {
 			return ErrSequenceConflict
 		}
 		return nil
 	}
+	// A definitive completion must release admission in the same commit that
+	// makes its terminal event replayable. Preserve other recorded outcomes.
+	if event.Type == "complete" && submission.State == SubmissionDispatching && !submission.Retired {
+		submission.State = SubmissionCompleted
+	}
 	submission.TerminalEventRetained = true
-	submission.TerminalSequence = sequence
+	submission.TerminalSequence = event.Sequence
 	submission.UpdatedAt = time.Now().UTC()
 	encoded, err := json.Marshal(submission)
 	if err != nil {
@@ -281,10 +289,16 @@ func markSubmissionTerminalTx(ctx context.Context, tx *bolt.Tx, id string, seque
 	if newBytes > oldBytes && journalBytes+newBytes-oldBytes > maxJournalBytes {
 		return ErrJournalFull
 	}
-	if err := bucket.Put([]byte(id), encoded); err != nil {
+	if err := bucket.Put([]byte(event.SubmissionID), encoded); err != nil {
 		return err
 	}
 	return tx.Bucket(bucketMeta).Put(keyJournalBytes, encodeInt64(journalBytes+newBytes-oldBytes))
+}
+
+func submissionOwnsTerminal(submission Submission, event Event) bool {
+	return submission.SessionID == event.SessionID && submission.IncarnationID == event.IncarnationID &&
+		submission.HarnessGeneration == event.HarnessGeneration &&
+		(submission.StreamID == "" || submission.StreamID == event.StreamID)
 }
 
 func (j *Journal) GetSubmission(ctx context.Context, id string) (Submission, error) {

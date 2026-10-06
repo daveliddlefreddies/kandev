@@ -76,6 +76,14 @@ async function expectDiffTextAbsent(testPage: Page, text: string, timeout = 10_0
 test.describe("Mobile changes panel", () => {
   test.describe.configure({ retries: 1, timeout: 120_000 });
 
+  test.afterEach(async ({ backend }, testInfo) => {
+    if (testInfo.status === testInfo.expectedStatus) return;
+    await testInfo.attach("mobile-changes-backend.log", {
+      path: backend.logPath,
+      contentType: "text/plain",
+    });
+  });
+
   test.beforeEach(({ backend }) => {
     // The worker reuses its fixture repository across tests. Restore a clean
     // working tree so staged/untracked files from an earlier scenario cannot

@@ -21,6 +21,14 @@ function commandDialog(page: Page) {
 test.describe.serial("Quick Chat cancellation palette and composer", () => {
   test.describe.configure({ retries: 1 });
 
+  test.afterEach(async ({ backend }, testInfo) => {
+    if (testInfo.status === testInfo.expectedStatus) return;
+    await testInfo.attach("quick-chat-cancellation-backend.log", {
+      path: backend.logPath,
+      contentType: "text/plain",
+    });
+  });
+
   test.beforeAll(async ({ backend }) => {
     await backend.restart({
       KANDEV_FEATURES_CLAUDE_BACKGROUND_PROMPT_HANDOFF: "true",

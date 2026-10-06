@@ -437,6 +437,7 @@ func TestJournalTerminalEventMarksSubmissionAtomically(t *testing.T) {
 	ctx := context.Background()
 	if _, err := j.PutSubmission(ctx, Submission{
 		ID: "submission-terminal", Hash: "hash-terminal", Payload: []byte("prompt"),
+		SessionID: "session-1", IncarnationID: "incarnation-1", HarnessGeneration: 2,
 	}); err != nil {
 		t.Fatal(err)
 	}

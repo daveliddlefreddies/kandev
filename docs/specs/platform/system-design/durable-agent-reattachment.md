@@ -84,6 +84,7 @@ After ordered terminal projection, reconcile the authoritative submission state 
 Resolve the matching block with compare-and-set on block identity, reason, submission, incarnation, and generation.
 Idempotent duplicate settlement returns success without repeated workflow or queue effects.
 Terminal projection may finish before the prompt RPC returns. Its completion handler must preserve the matching submission's recorded terminal outcome instead of requiring it to remain dispatching or creating a new delivery recovery block.
+The agentctl journal commits a definitive `complete` event and its matching dispatching submission's completed state atomically, before replay can expose completion and admit a successor. The event must match the submission's session, incarnation, harness generation, and bound stream. Previously recorded uncertain, failed, cancelled, or retired outcomes remain unchanged.
 An unreadable, unresolved, or mismatched submission still fails closed.
 Do not use the broad manual recovery resolver as an unconditional automatic unblock operation.
 Other native-state, configuration, authorization, workspace, runtime-loss, and operator-required blocks remain effective.

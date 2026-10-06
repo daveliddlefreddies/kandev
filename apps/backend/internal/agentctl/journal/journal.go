@@ -463,7 +463,7 @@ func (j *Journal) appendEventTx(ctx context.Context, tx *bolt.Tx, event *Event) 
 		return err
 	}
 	if event.Terminal && event.SubmissionID != "" {
-		return markSubmissionTerminalTx(ctx, tx, event.SubmissionID, event.Sequence, j.config.MaxJournalBytes)
+		return markSubmissionTerminalTx(ctx, tx, *event, j.config.MaxJournalBytes)
 	}
 	return nil
 }
