@@ -42,6 +42,24 @@ async function expectRetainedTurnReady(session: SessionPage) {
   ).toBeVisible();
 }
 
+async function expectContinuationHistory(session: SessionPage) {
+  // Continuation may finish while a viewer loads. Observe either its persisted
+  // pending card or its completed answer, without requiring an expired phase.
+  await expect(
+    session
+      .transientRetryCard()
+      .or(
+        session
+          .activeChat()
+          .getByText(
+            "Mock provider continued the unfinished request without repeating completed work.",
+            { exact: true },
+          ),
+      )
+      .first(),
+  ).toBeVisible();
+}
+
 async function countRetainedFailures(
   apiClient: Parameters<typeof createRetainedCapacityFixture>[1],
   sessionId: string,
@@ -213,14 +231,13 @@ test("desktop: completed tools continue once on the same runtime across reload a
 
     await testPage.reload();
     await session.waitForLoad();
-    await expect(session.transientRetryCard()).toBeVisible();
+    await expectContinuationHistory(session);
     const viewer = await testPage.context().newPage();
     try {
       await viewer.goto(`/t/${fixture.taskId}`);
       const otherViewer = new SessionPage(viewer);
       await otherViewer.waitForLoad();
-      await expect(otherViewer.transientRetryCard()).toBeVisible();
-      await expect(otherViewer.transientRetryCard()).toContainText("Continuing");
+      await expectContinuationHistory(otherViewer);
     } finally {
       await viewer.close();
     }

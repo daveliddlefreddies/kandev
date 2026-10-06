@@ -202,3 +202,21 @@ Completed in the primary session. Retained provider failures render as truthful 
   ```
 - Backend build and frontend pseudo-locale QA build passed during implementation.
 - Public documentation validation, documentation catalog/specification checks, the actual-change work-order coverage preflight, and `git diff --check` are recorded in the completed manifest.
+
+
+### Hosted continuation observation follow-up, 2026-10-06
+
+Run `37460626206`, shard 2 job `112264886182`, expected the five-second
+continuation countdown to remain in the same phase after a reload and another
+viewer loaded. Its attempts instead observed a completed continuation or the
+valid reconnecting phase. The initial countdown assertion remains. Each later
+viewer now observes either the persisted pending card or the exact completed
+continuation answer. The independent checks still require exactly two prompts,
+one completed side effect, one ACP initialization/new session, no load or resume,
+no retained failure entry, and the unchanged execution identity. No failure card
+is accepted as successful continuation. Product behavior and budgets are unchanged.
+
+- Managed desktop targeted run, three independent repetitions with retries disabled: all six scroll/continuation cases passed in 1.1 minutes.
+- Final full-suite and hosted receipts are recorded below when complete.
+
+- Final exact-source desktop check: `cd apps/web && pnpm e2e:run --host --no-build --shards 1 --project chromium tests/session/transient-turn-runtime-continuity.spec.ts tests/chat/auto-scroll-toggle.spec.ts -- --retries 0 --trace=retain-on-failure`: all sixteen cases passed in 5.4 minutes, including native retry exhaustion and the positive held-tail observation. No retry was exercised. Full web ESLint, focused ESLint, and the web typecheck passed.
