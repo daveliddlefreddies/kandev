@@ -922,3 +922,35 @@ without workflow completion.
 
 - `go test -race -tags sqlite_fts5 ./cmd/mock-agent ./internal/backendapp
   ./internal/agentctl/types/streams -count=1` passed.
+
+### Windows CI result-cache remediation, 2026-10-06
+
+Current-head Windows process job `112307710263` reached the unchanged
+40-minute job deadline after delayed test startup. Its single rerun,
+`112331370974`, passed every test and printed the package `ok` result at
+15:14:04 UTC, then stalled before the final package JSON event until the job
+was cancelled at 15:27:27 UTC. No individual assertion failed.
+
+Go 1.26's test runner prints that result after the test process has exited,
+then performs result-cache input hashing before closing its JSON converter.
+The Windows process command now uses `-count=1` to run the live subprocess
+suite on every invocation and bypass result-cache lookup and storage. Build
+caching, race detection, the complete package selection, the 25-minute test
+deadline, and the 40-minute job deadline remain unchanged.
+
+- The workflow contract test failed against the previous command, then passed
+  all 13 tests with the uncached invocation.
+- `TMPDIR=/root/.cache/kandev-agentctl-runtime-tmp GODEBUG=gocachetest=1
+  /root/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.0.linux-amd64/bin/go
+  test -p 1 -race -count=1 -v -json -timeout 25m
+  ./internal/agentctl/server/process/...` passed locally and emitted terminal
+  package success events. Its diagnostic output confirmed result caching was
+  disabled by `-test.count=1`. This is Linux evidence, not a Windows receipt.
+- `python3 .github/scripts/lint-action-pinning_test.py` passed all nine tests.
+- `zizmor .github/workflows` reported existing repository findings. An offline
+  JSON comparison of the changed workflow against its pre-change version
+  found the same single low-severity Windows CMD analysis limitation and no
+  added findings.
+
+Fresh hosted validation of this workflow change remains pending. The separate
+PostgreSQL, native containment, and live harness release gates remain open.

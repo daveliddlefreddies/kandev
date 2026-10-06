@@ -67,7 +67,7 @@ class BackendTestsWorkflowContractTest(unittest.TestCase):
         self.assertNotIn("continue-on-error", windows_job)
         process = step_block(windows_job, "Test Windows process package")
         self.assertIn("if: matrix.suite == 'process'", process)
-        self.assertIn("go test -race -v -json -timeout 25m ./internal/agentctl/server/process/...", process)
+        self.assertIn("go test -race -count=1 -v -json -timeout 25m ./internal/agentctl/server/process/...", process)
         native = step_block(windows_job, "Test windows-sensitive packages")
         self.assertNotIn("./internal/agentctl/server/process/", native)
         for package in (

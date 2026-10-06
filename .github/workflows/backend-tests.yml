@@ -855,7 +855,9 @@ jobs:
 
       - name: Test Windows process package
         if: matrix.suite == 'process'
-        run: go test -race -v -json -timeout 25m ./internal/agentctl/server/process/...
+        # Run live subprocess checks on every invocation and bypass result-cache
+        # input hashing after the suite exits. Build caching remains enabled.
+        run: go test -race -count=1 -v -json -timeout 25m ./internal/agentctl/server/process/...
 
       # Scope to packages with non-trivial Windows-specific code paths.
       # Tests that genuinely cannot run on Windows (Unix sockets, POSIX
