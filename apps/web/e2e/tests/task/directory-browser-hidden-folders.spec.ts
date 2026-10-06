@@ -6,6 +6,7 @@ import type { Locator, Page } from "@playwright/test";
 import { SessionPage } from "../../pages/session-page";
 import fs from "node:fs";
 import path from "node:path";
+import { SessionPage } from "../../pages/session-page";
 import type { BackendContext } from "../../fixtures/backend";
 
 const HIDDEN_DIRECTORY = ".hidden-project";
@@ -52,6 +53,7 @@ async function openFolderSourceDialog(page: Page, taskId: string) {
   await page.goto(`/t/${taskId}`);
   const session = new SessionPage(page);
   await session.waitForLoad();
+  await session.waitForChatIdle();
   await session.waitForDockviewReady();
   const filesTab = page.locator(".dv-tab:visible", {
     has: page.locator(".dv-default-tab-content").filter({ hasText: /^Files$/ }),
