@@ -26,6 +26,14 @@ async function waitForAgentMarker(
 }
 
 test.describe("Workflow session targeting", () => {
+  test.afterEach(async ({ backend }, testInfo) => {
+    if (testInfo.status === testInfo.expectedStatus) return;
+    await testInfo.attach("workflow-startup-backend.log", {
+      path: backend.logPath,
+      contentType: "text/plain",
+    });
+  });
+
   test("authors initial and source-session choices on desktop", async ({
     testPage,
     apiClient,

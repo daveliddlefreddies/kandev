@@ -50,6 +50,8 @@ test.describe("Long prepare (slow git fetch)", () => {
       const session = new SessionPage(testPage);
       await session.waitForLoad();
 
+      await session.clickTab("Files");
+
       // While git fetch is sleeping, agentctl cannot become ready. The file
       // tree must either remain in the "waiting" state or reach a loaded tree
       // if the fetch completes before the waiting indicator paints. The test
@@ -88,6 +90,8 @@ test.describe("Long prepare (slow git fetch)", () => {
       // becomes ready. File tree leaves the waiting state automatically.
       await expect(fileTreeWaiting).toBeHidden({ timeout: 30_000 });
       await expect(fileTreeManual).toHaveCount(0);
+      await session.clickTab("Files");
+      await expect(fileTreeNode).toBeVisible({ timeout: 30_000 });
     } finally {
       // Restore fast git for any subsequent tests that share this worker.
       if (fs.existsSync(delayFile)) fs.unlinkSync(delayFile);

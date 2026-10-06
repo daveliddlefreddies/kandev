@@ -396,6 +396,7 @@ test.describe("Task session queue", () => {
   }) => {
     test.setTimeout(120_000);
 
+    const gateway = watchWs(testPage);
     const session = await seedTaskAndWaitForIdle(
       testPage,
       apiClient,
@@ -437,7 +438,9 @@ test.describe("Task session queue", () => {
     const sendNow = target.getByTestId("queue-entry-send-now");
     await expect(sendNow).toBeVisible({ timeout: 10_000 });
     await expect(sendNow).toBeEnabled({ timeout: 10_000 });
+    const sendNowResponse = gateway.waitForResponse("message.queue.send_now");
     await sendNow.click();
+    await sendNowResponse;
 
     await expect(panel.getByTestId("queue-entry-text")).toHaveCount(2, { timeout: 10_000 });
     await expect(panel.getByTestId("queue-entry-text").nth(0)).toContainText(markerA);
