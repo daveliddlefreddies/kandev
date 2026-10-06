@@ -2,7 +2,7 @@ import { type Page, type Locator } from "@playwright/test";
 import { test, expect } from "../../fixtures/test-base";
 import type { SeedData } from "../../fixtures/test-base";
 import type { ApiClient } from "../../helpers/api-client";
-import { waitForSessionState } from "../../helpers/session";
+import { waitForAgentMessage, waitForSessionState } from "../../helpers/session";
 import { waitForStableActiveSession } from "../../helpers/session-store";
 import { SessionPage } from "../../pages/session-page";
 import { registerSeparateQueueRows } from "../../helpers/message-queue-settings";
@@ -291,13 +291,10 @@ test.describe("Cross-task agent message attribution", () => {
     await expect(session.chat.getByTestId("queue-chip")).toContainText("1 queued", {
       timeout: 30_000,
     });
-    await waitForSessionState(apiClient, {
-      taskId: target.id,
-      sessionId: target.sessionId,
-      expectedState: "WAITING_FOR_INPUT",
-      message: "The target turn must finish before its queued follow-up is delivered",
-      timeout: 90_000,
-    });
+    // Queue delivery can begin the next turn immediately after completion.
+    // Observe the persisted first-turn result instead of sampling that brief idle state.
+    await waitForAgentMessage(apiClient, target.sessionId, "first turn done", 90_000);
+    await waitForCrossTaskMessage(apiClient, target.sessionId);
 
     // The delivered bubble shows only the prompt; the kandev-system
     // attribution block is stripped before the API/WS broadcast.

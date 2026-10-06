@@ -306,7 +306,17 @@ async function runProfileSessionLifecycleScenario(
   });
 }
 
+test.use({ trace: "retain-on-failure" });
+
 test.describe("Workflow agent profile switching", () => {
+  test.afterEach(async ({ backend }, testInfo) => {
+    if (testInfo.status === testInfo.expectedStatus) return;
+    await testInfo.attach("workflow-agent-switch-backend.log", {
+      path: backend.logPath,
+      contentType: "text/plain",
+    });
+  });
+
   for (const scenario of PROFILE_SESSION_LIFECYCLE_SCENARIOS) {
     test(`${scenario.startPolicy} on start and ${scenario.endPolicy} on end saves, reloads, and applies independently`, async ({
       testPage,

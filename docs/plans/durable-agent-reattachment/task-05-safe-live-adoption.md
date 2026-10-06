@@ -881,3 +881,44 @@ checks that the cache remains unchanged and unsupported values are ignored.
 - The superseded b861 hosted run was cancelled after strict browser flakes; its
   checks are not current-head evidence. Fresh hosted CI and review evidence for
   the published rebased head remain pending.
+
+
+### Latest-main continuation integration and CI remediation, 2026-10-06
+
+Merged main's command autocomplete and Cursor native continuation changes while
+preserving both cancellation regression tests. Cancellation uses the shared
+continuation-aware waiting policy, including retained-runtime cancellation,
+without workflow completion.
+
+- `go test -race -tags sqlite_fts5 ./internal/orchestrator/... -count=1`
+  passed after resolving the duplicate cancellation-policy declaration.
+- The parallel race run passed journal, process, ACP transport, lifecycle, and
+  routing-error packages. Its initial orchestrator build failure is superseded
+  by the successful command above.
+- `make -C apps/backend build e2e-plugin-package` and
+  `golangci-lint run ./... --allow-serial-runners
+  --new-from-rev=dcdff28b4700b9db0d86fa6483cff16e87d6c36b --timeout=10m`
+  passed.
+- Desktop managed E2E passed 10/10 with `--retries=0`: queued-message attribution,
+  cross-workspace dashboard isolation with a same-workspace positive control,
+  workflow auto-launch, six native continuation scenarios, and continuation
+  reload/cancellation. The command selected
+  `tests/chat/agent-message-attribution.spec.ts`,
+  `tests/office/realtime-dashboard.spec.ts`,
+  `tests/workflow/workflow-agent-switch.spec.ts`, and
+  `tests/session/provider-interruption-continuation.spec.ts` through
+  `pnpm e2e:run --host --no-build --shards 1 --project chromium --
+  --retries=0 --grep 'running target task: queued message|dashboard does not refetch|auto-launches agent when step has profile override and prompt|integration:|desktop: accepted continuation'`.
+- Queue assertions now observe a persisted first-turn message rather than the
+  brief idle interval between turns. Dashboard coverage isolates independent
+  Office producers while forwarding actual cross-workspace events through the
+  production handler and requiring a same-workspace HTTP refetch.
+- Workflow startup retained its original deadline. Failure diagnostics now keep
+  first-attempt traces and attach the backend log; no reproduced workflow defect
+  justified changing production behavior or its deadline.
+- Feature-specific PostgreSQL conformance, native Windows/macOS containment,
+  and live harness probes remain outstanding release gates. Hosted CI for the
+  delivered remediation remains pending until the exact new head finishes.
+
+- `go test -race -tags sqlite_fts5 ./cmd/mock-agent ./internal/backendapp
+  ./internal/agentctl/types/streams -count=1` passed.

@@ -1062,7 +1062,7 @@ export const createSessionSlice: StateCreator<
           status.agentExecutionId,
         );
       draft.sessionAgentctl.itemsBySessionId[sessionId] = sameLiveExecution
-        ? { ...status, status: "ready" }
+        ? { ...status, status: "ready", startingExecutionId: status.agentExecutionId }
         : status;
     }),
   setWorktree: (worktree) =>

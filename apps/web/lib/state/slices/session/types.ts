@@ -90,6 +90,8 @@ export type SessionAgentctlStatus = {
   status: "starting" | "ready" | "error";
   errorMessage?: string;
   agentExecutionId?: string;
+  /** Startup identity retained when live session state implies readiness. */
+  startingExecutionId?: string;
   updatedAt?: string;
 };
 

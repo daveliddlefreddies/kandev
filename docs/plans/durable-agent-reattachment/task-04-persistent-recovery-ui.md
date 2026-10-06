@@ -142,3 +142,34 @@ Completed 2026-09-28.
 - Related frontend recovery, rendering, and hydration tests passed 14/14 with `pnpm test lib/state/slices/session/session-merge-delivery-recovery.test.ts lib/state/slices/session/session-merge-goal.test.ts components/task/chat/use-composer-props.test.tsx lib/session-agent-delivery-recovery.test.ts`. The new RED test reproduced an older delivery revision replacing the settled notice and unrelated error; the revision fence now passes it. `pnpm lint`, `pnpm run typecheck`, `pnpm run i18n:check`, and `pnpm run i18n:ratchet` passed. Public recovery guidance was updated in `docs/public/sessions-and-review.md` and `docs/public/operations.md`; `node --test scripts/validate-public-docs.test.mjs` passed 62/62 and `node scripts/validate-public-docs.mjs` accepted all 47 published pages.
 - `go test -race ./internal/task/service ./internal/gateway/websocket -count=1` passed. The complete lifecycle race suite, orchestrator race suite, and focused SQLite/orchestrator settlement tests passed across the verified runs. The real disconnect, recovery revision, and prompt-admission regressions passed in the focused multi-package race run. SQL guard and SQLite store conformance passed. PostgreSQL conformance was skipped because `KANDEV_TEST_POSTGRES_DSN` is not configured.
 - Native Windows/macOS process verification remains a release gate. No changes were committed.
+
+
+### Latest-main configuration startup integration, 2026-10-06
+
+Command autocomplete confirmation and retained-agent readiness now share the
+observed startup execution identity. A live session can promote agentctl to
+ready without losing that identity before the matching STARTING event.
+The identity is consumed at STARTING or a live transition; a later startup
+cannot restore stale confirmation. The ordering regression failed before the
+fix, and the added later-startup regression also failed before its fix.
+
+- Focused session handlers and state tests passed 134/134 with
+  `pnpm exec vitest run lib/ws/handlers/session-confirmed-config-lifecycle.test.ts
+  lib/state/slices/session/session-slice.upsert.test.ts
+  lib/ws/handlers/agent-session.test.ts lib/ws/handlers/session-models.test.ts`.
+- Command autocomplete, model hydration, and confirmed/startup configuration
+  tests passed 75/75 across the seven affected suites.
+- `pnpm lint`, `pnpm run typecheck`, and `pnpm run build:e2e` passed.
+- The owning command autocomplete system design records the consumed execution
+  identity. Public behavior remains the established same-execution confirmation
+  and new-execution invalidation contract.
+
+- Mobile managed E2E passed 2/2 with `pnpm e2e:run --host --no-build
+  --shards 1 --project mobile-chrome
+  tests/chat/mobile-cancel-turn-availability.spec.ts
+  tests/session/mobile-provider-interruption-continuation.spec.ts -- --retries=0`.
+  The cancellation test uses the shared settlement observation barrier to
+  assert pending/disabled UI before forwarding the actual settlement frames.
+  It still checks 44-pixel reachability and eventual background settlement.
+- Catalog validation, full specification lint, 36 linter tests, changed-E2E
+  ESLint/Prettier, and whitespace checks passed.

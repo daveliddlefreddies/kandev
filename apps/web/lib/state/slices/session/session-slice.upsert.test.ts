@@ -228,6 +228,7 @@ describe("agentctl readiness from session snapshots", () => {
     expect(store.getState().sessionAgentctl.itemsBySessionId[SESSION_ID]).toEqual({
       status: "ready",
       agentExecutionId: SECOND_AGENT_EXECUTION_ID,
+      startingExecutionId: SECOND_AGENT_EXECUTION_ID,
       updatedAt: LATER_TS,
     });
   });
