@@ -5,6 +5,7 @@ import {
   assertRetainedACPTrace,
   assertRetainedFailureMessage,
   createRetainedCapacityFixture,
+  expectContinuationHistory,
   readMockACPTrace,
   waitForRetainedTurnFailure,
 } from "../../helpers/transient-turn-runtime-continuity";
@@ -39,24 +40,6 @@ async function expectRetainedTurnReady(session: SessionPage) {
   await expect(session.activeChat().getByTestId("chat-input-area")).toBeVisible();
   await expect(
     session.activeChat().getByRole("button", { name: "Session model settings" }),
-  ).toBeVisible();
-}
-
-async function expectContinuationHistory(session: SessionPage) {
-  // Continuation may finish while a viewer loads. Observe either its persisted
-  // pending card or its completed answer, without requiring an expired phase.
-  await expect(
-    session
-      .transientRetryCard()
-      .or(
-        session
-          .activeChat()
-          .getByText(
-            "Mock provider continued the unfinished request without repeating completed work.",
-            { exact: true },
-          ),
-      )
-      .first(),
   ).toBeVisible();
 }
 
@@ -135,6 +118,9 @@ test("desktop: capacity after tools keeps one error and the same runtime for mod
       ),
     ).toBe(true);
 
+    await expect(modelList).toBeVisible();
+    await testPage.keyboard.press("Escape");
+    await expect(modelList).toBeHidden();
     await session.sendMessage("/e2e:simple-message");
     await expect
       .poll(
@@ -224,10 +210,8 @@ test("desktop: completed tools continue once on the same runtime across reload a
     const session = new SessionPage(testPage);
     await testPage.goto(`/t/${fixture.taskId}`);
     await session.waitForLoad();
-    await expect(session.transientRetryCard()).toBeVisible({ timeout: 30_000 });
-    await expect(session.transientRetryCard()).toContainText("Continuing in");
+    await expectContinuationHistory(session, { timeout: 30_000 });
     const executionId = await waitForExecutionId(apiClient, fixture.taskId, fixture.sessionId);
-    assertRetainedACPTrace(fixture.tracePath, 1);
 
     await testPage.reload();
     await session.waitForLoad();
@@ -287,13 +271,20 @@ test("desktop: idle cancellation and retry exhaustion preserve the live runtime 
   seedData,
 }) => {
   for (const scenario of ["cancel", "exhaust"]) {
-    const fixture = await createRetainedCapacityFixture(backend, apiClient, seedData, scenario);
+    const fixture = await createRetainedCapacityFixture(
+      backend,
+      apiClient,
+      seedData,
+      scenario,
+      scenario === "cancel" ? { initialPrompt: "/e2e:simple-message" } : {},
+    );
     try {
       const session = new SessionPage(testPage);
       await testPage.goto(`/t/${fixture.taskId}`);
       await session.waitForLoad();
       const executionId = await waitForExecutionId(apiClient, fixture.taskId, fixture.sessionId);
       if (scenario === "cancel") {
+        await session.sendMessage("/capacity-cancel");
         await expect(session.transientRetryCard()).toBeVisible({ timeout: 30_000 });
         await session.recoveryCancelRetryButton().click();
       }
@@ -309,7 +300,7 @@ test("desktop: idle cancellation and retry exhaustion preserve the live runtime 
       expect(await waitForExecutionId(apiClient, fixture.taskId, fixture.sessionId)).toBe(
         executionId,
       );
-      assertRetainedACPTrace(fixture.tracePath, scenario === "cancel" ? 1 : 6);
+      assertRetainedACPTrace(fixture.tracePath, scenario === "cancel" ? 2 : 6);
     } finally {
       await fixture.dispose();
     }

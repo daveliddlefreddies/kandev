@@ -255,7 +255,7 @@ test.describe("Manual proceed to next workflow step", () => {
     await testPage.getByRole("option", { name: /Mock Smart/ }).click();
     await modelSaved;
     await expect(modelTrigger).toContainText("Mock Smart", { timeout: 5_000 });
-    await modelTrigger.click();
+    await expect(testPage.getByTestId("config-option-trigger-effort")).toBeVisible();
     await testPage.getByTestId("config-option-trigger-effort").click();
     const effortSaved = waitForHttp(testPage, "POST", /\/set-config-option$/, {
       predicate: (response) => response.ok(),

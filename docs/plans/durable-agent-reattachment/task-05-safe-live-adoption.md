@@ -1039,3 +1039,61 @@ provider-description touch case also passed three times. The old per-suite
 retry override was removed so the runner's retry policy applies. No temporary
 focus probe remains. Fresh pushed-head CI and advanced-base compatibility are
 still required; manual release gates retain their existing status.
+
+### Follow-up hosted CI fixture repairs
+
+The hosted stale-error model test and context-reset settings test clicked the
+picker trigger again after a successful selection, closing the picker that
+correctly remains open. Preserve the production open policy. The stale-error
+fixture now observes the newer successful HTTP response before releasing the
+older failed response, then drains its owned route before cleanup. Opening
+model fixtures wait for their exact persisted response and idle session.
+
+The shared seed repository cleanup now restores only the origin URL during
+integration teardown. Tracking references refresh after task reset, before a
+new browser scenario. Direct branch-recovery callers retain the default
+refresh. Fetch failures retain stderr. Two actual remote-reference-lock
+regressions failed before the helper change and passed afterward. The original
+hosted Git error had suppressed stderr; the controlled lock does not establish
+that the hosted failure had the same cause.
+
+`cd apps/web && pnpm exec vitest run e2e/helpers/seed-repository-origin.test.ts e2e/helpers/mobile-threads-swipe-helpers.test.ts`
+passed five tests. Web typecheck and focused ESLint passed after fixture wiring.
+Rebuilt picker and workflow cases passed; retained-runtime follow-up is
+recorded in the owning continuity work order;
+fresh pushed-head hosted CI remains required. No release gate is closed by
+these fixture checks.
+
+The timed-out hosted shard includes the retained-runtime model-change case.
+The local 19-case batch reproduced its eight-minute timeout: the native trace
+recorded the successful model change but no follow-up prompt, and the failure
+snapshot retained the open model-picker dialog. The other 18 cases passed,
+including all workflow transitions. The case now closes the picker with Escape
+and asserts it is hidden before sending the follow-up. Retain all same-runtime,
+message-count, and native ACP trace assertions. Neither test nor job timeouts
+were increased. The rebuilt combined desktop run passed the repaired case
+and all picker, port-forwarding and workflow cases; the subsequent retained-
+runtime diagnostic run passed all 12 cases;
+the original hosted shard's missing terminal artifact remains a limitation on
+attributing its full timeout until the rerun or fresh CI supplies evidence.
+
+
+Final no-retry phone integration check:
+`KANDEV_RUN_QUIET_DIR=/root/.cache/kandev-pr3598-quiet-owned E2E_PORT_OFFSET=0 GOMAXPROCS=4 scripts/run-quiet e2e --summary -- pnpm --dir apps/web e2e:run --host --no-build --project mobile-chrome -- tests/task/mobile-threads-view.spec.ts tests/task/mobile-threads-swipe.spec.ts tests/task/mobile-create-task-workflow-agent-overrides.spec.ts tests/session/mobile-port-forwarding.spec.ts tests/pr/mobile-pr-watcher-missing-branch.spec.ts tests/task/mobile-launch-failure-recovery.spec.ts tests/session/mobile-transient-turn-runtime-continuity.spec.ts --retries=0 --trace=retain-on-failure`
+passed all 21 cases in 10.7 minutes. This covers the shared seed-origin fixture,
+phone cancellation before any retry dispatch, continuation across viewers,
+retry exhaustion, launch recovery, port actions and native thread navigation.
+Web typecheck, full web ESLint, all twelve changed TypeScript files' Prettier
+checks, and the five seed-origin/swipe unit regressions passed on this source.
+These results do not close manual release gates or substitute for pushed-head CI.
+
+
+Final desktop native-runtime check:
+`KANDEV_RUN_QUIET_DIR=/root/.cache/kandev-pr3598-quiet-owned E2E_PORT_OFFSET=0 GOMAXPROCS=4 scripts/run-quiet e2e --summary -- pnpm --dir apps/web e2e:run --host --no-build --project chromium -- tests/session/transient-turn-runtime-continuity.spec.ts --retries=0 --trace=retain-on-failure`
+passed all four cases in 3.7 minutes after the shared observer and causal
+cancellation setup. Actual retry counts, exact native prompt counts, retained
+execution identity, completed-effect counts and backend restart cleanup passed.
+The earlier isolated cleanup startup failure remains unconfirmed; this result
+does not claim a production startup fix. Catalog/full spec lint and coverage
+preflight passed: 57 work orders against merged main, 65 against the recorded
+PR base, with zero coverage errors.
