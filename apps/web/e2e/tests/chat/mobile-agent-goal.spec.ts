@@ -7,6 +7,7 @@ import {
   startQuickChatFromSetup,
   sendQuickChatMessage,
   waitForQuickChatDirectInput,
+  waitForSessionSettledBaseline,
 } from "./quick-chat-helpers";
 
 async function openMobileQuickChat(page: Page): Promise<Locator> {
@@ -22,16 +23,20 @@ async function openMobileQuickChat(page: Page): Promise<Locator> {
 test.describe("mobile agent goal visibility", () => {
   test.describe.configure({ retries: 0 });
 
-  test("submits once while the message acknowledgement is delayed", async ({ testPage }) => {
+  test("submits once while the message acknowledgement is delayed", async ({
+    testPage,
+    apiClient,
+  }) => {
     const proxy = await routeSessionEntryRecovery(testPage);
     const dialog = await openMobileQuickChat(testPage);
-    await startQuickChatFromSetup(dialog, testPage);
+    const started = await startQuickChatFromSetup(dialog, testPage);
+    await waitForSessionSettledBaseline(apiClient, started.task_id, started.session_id);
     await waitForQuickChatDirectInput(dialog);
     await expect(
       dialog.getByText("Please get ready for my next question.", { exact: false }).first(),
     ).toBeVisible();
     // The opening prompt can be carried by launch for passthrough profiles or
-    // by message.add for structured profiles. The settled conversation above
+    // by message.add for structured profiles. The persisted settled state above
     // is the baseline; this test measures only the following user submission.
     const openingMessageRequestCount = proxy.requestCount("message.add");
     proxy.delayNextResponses("message.add", 1, 3_500, "exercise asynchronous composer clearing");
