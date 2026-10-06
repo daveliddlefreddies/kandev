@@ -125,3 +125,17 @@ Passed locally:
 - `git diff --check`
 
 Release gates remain open: containment tests have not run natively on macOS or Windows, and PostgreSQL conformance needs a configured test database. Cross-compilation does not close the native execution gates.
+
+Main-integration follow-up retains the continuous bounded reader introduced by
+the log-drain work order and the replacement launcher's owned-reader wait group.
+Complete stderr records still enter the sanitized bounded exit tail; an
+oversized record contributes only a fixed discard marker, never a raw prefix.
+Adopting the new reader without this seam failed the existing diagnostic
+regression. The updated discard/no-content assertion also failed before the
+capture seam was added, then passed with the combined implementation.
+
+`go test ./internal/agent/runtime/agentctl/launcher -count=1` and
+`go test -p 1 -race ./internal/agent/runtime/agentctl/launcher
+./internal/agent/runtime/agentctl -count=1` passed from `apps/backend`.
+Fresh hosted checks and the previously documented native/PostgreSQL release
+gates remain pending; these receipts do not close them.

@@ -6,10 +6,7 @@ import (
 	"unicode"
 )
 
-const (
-	maxDiagnosticLineBytes = 64 * 1024
-	maxDiagnosticTailBytes = 8 * 1024
-)
+const maxDiagnosticTailBytes = 8 * 1024
 
 var diagnosticSecretPattern = regexp.MustCompile(`(?i)(authorization\s*:\s*bearer\s+|bearer\s+|(?:api[_-]?key|token|secret|credential|password)\s*[:=]\s*)[^\s,;]+`)
 

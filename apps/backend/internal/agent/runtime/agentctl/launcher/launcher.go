@@ -4,13 +4,10 @@
 package launcher
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -655,69 +652,6 @@ func (l *Launcher) waitForHealthy(ctx context.Context) error {
 	}
 
 	return fmt.Errorf("timeout waiting for agentctl to become healthy")
-}
-
-// pipeOutput drains a child output stream and preserves its structured log
-// level. Unstructured stderr remains visible at WARN, while stdout passthrough
-// noise stays at DEBUG.
-func (l *Launcher) pipeOutput(name string, source io.Reader) {
-	reader := bufio.NewReaderSize(source, 32*1024)
-	line := make([]byte, 0, 4096)
-	truncated := false
-	for {
-		fragment, err := reader.ReadSlice('\n')
-		available := maxDiagnosticLineBytes - len(line)
-		if available > len(fragment) {
-			available = len(fragment)
-		}
-		if available > 0 {
-			line = append(line, fragment[:available]...)
-		}
-		if available < len(fragment) && len(bytes.Trim(fragment[available:], "\r\n")) > 0 {
-			truncated = true
-		}
-		if errors.Is(err, bufio.ErrBufferFull) {
-			continue
-		}
-		l.handleOutputLine(name, line, truncated)
-		line = line[:0]
-		truncated = false
-		if err != nil {
-			return
-		}
-	}
-}
-
-func (l *Launcher) handleOutputLine(name string, line []byte, truncated bool) {
-	line = bytes.TrimSuffix(line, []byte{'\n'})
-	line = bytes.TrimSuffix(line, []byte{'\r'})
-	if truncated {
-		line = append(line, []byte(" [truncated]")...)
-	}
-	text := string(line)
-	if name == "stderr" && text != "" {
-		l.captureDiagnostic(text)
-	}
-	if text == "" {
-		return
-	}
-	level, message := childLogRecord(text)
-	switch level {
-	case "DEBUG":
-		l.logger.Debug(message, zap.String("stream", name))
-	case "INFO":
-		l.logger.Info(message, zap.String("stream", name))
-	case "WARN":
-		l.logger.Warn(message, zap.String("stream", name))
-	case "ERROR", "FATAL", "PANIC", "DPANIC":
-		l.logger.Error(message, zap.String("stream", name))
-	default:
-		if name == "stderr" {
-			l.logger.Warn(message, zap.String("stream", name))
-		} else {
-			l.logger.Debug(message, zap.String("stream", name))
-		}
-	}
 }
 
 // childLogLevel extracts a recognized level from the agentctl child's trusted

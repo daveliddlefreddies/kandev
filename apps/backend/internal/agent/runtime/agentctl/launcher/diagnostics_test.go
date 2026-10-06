@@ -28,7 +28,7 @@ func TestPipeOutputDrainsLongLinesAndKeepsBoundedDiagnostics(t *testing.T) {
 		close(finished)
 	}()
 
-	payload := "2026\tDEBUG\tcomponent\t" + strings.Repeat("x", maxDiagnosticLineBytes*3) + "\n" +
+	payload := "2026\tDEBUG\tcomponent\t" + strings.Repeat("x", pipeOutputRecordLimitBytes*3) + "\n" +
 		"2026\tINFO\tcomponent\ttoken=secret-value\n"
 	writeDone := make(chan error, 1)
 	go func() {
@@ -54,8 +54,11 @@ func TestPipeOutputDrainsLongLinesAndKeepsBoundedDiagnostics(t *testing.T) {
 	if len(diagnostic) > maxDiagnosticTailBytes {
 		t.Fatalf("diagnostic length = %d, exceeds %d bytes", len(diagnostic), maxDiagnosticTailBytes)
 	}
-	if !strings.Contains(diagnostic, "[truncated]") {
-		t.Fatal("long diagnostic line was not marked as truncated")
+	if !strings.Contains(diagnostic, "discarded oversized agentctl log record") {
+		t.Fatal("oversized diagnostic record did not retain a content-free discard marker")
+	}
+	if strings.Contains(diagnostic, strings.Repeat("x", 100)) {
+		t.Fatal("oversized diagnostic record retained raw content")
 	}
 	if strings.Contains(diagnostic, "secret-value") || !strings.Contains(diagnostic, "token=[redacted]") {
 		t.Fatalf("diagnostic credential was not sanitized: %q", diagnostic)
