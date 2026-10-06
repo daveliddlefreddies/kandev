@@ -954,3 +954,39 @@ deadline, and the 40-minute job deadline remain unchanged.
 
 Fresh hosted validation of this workflow change remains pending. The separate
 PostgreSQL, native containment, and live harness release gates remain open.
+
+### Main integration and conflict resolution, 2026-10-06
+
+Integrated main `7d55a599502530501f9308c21cb63f9c64d06ac8`. The sole merge
+conflict was the former load-failure fallback in `session.go`. The resolution
+retains this branch's typed restore coordinator and native-only recovery, which
+also preserves main's OpenCode prohibition on silently creating a replacement
+conversation. The incoming OpenCode missing-session regression now asserts
+`RestoreReasonNativeStateMissing` alongside no new-session call. Main's
+independent Windows job deadline increase to 60 minutes is retained with this
+branch's uncached live-process test invocation.
+
+- Focused lifecycle/OpenCode recovery tests passed with race detection.
+- `pnpm run typecheck` and `pnpm run lint` passed from `apps/web`.
+- Six affected Vitest files passed all 78 tests in the resolved workspace.
+- `python3 scripts/list-docs.py validate` and
+  `python3 scripts/lint-spec-files.py --all` passed;
+  `python3 scripts/lint-spec-files.test.py` passed all 36 tests.
+- Repository documentation coverage preflight passed for 54 changed work
+  orders against the integration base.
+
+Historical head `9d116356` mobile canvas failed-job rerun `112345332469`
+succeeded without a source change. This receipt does not substitute for CI on
+the integration head. PostgreSQL, native containment, and live harness release
+gates remain open.
+
+- Affected backend packages passed with race detection: agents, managedruntime,
+  settings/controller, runtime/activity, hostutility, and backendapp. The
+  initial lifecycle run failed two local scratch-path-sensitive tests: an
+  overlong Unix socket path and an SSH cleanup fixture. Both focused tests and
+  the complete lifecycle package passed using `TMPDIR=/root/k3598-tmp`; the
+  complete lifecycle rerun took 131.228 seconds. No production workaround was
+  introduced. All runs used `go test -p 1 -race ... -count=1`.
+- `golangci-lint run ./... --allow-serial-runners
+  --new-from-rev=7d55a599502530501f9308c21cb63f9c64d06ac8 --timeout=10m`
+  passed with zero issues.
