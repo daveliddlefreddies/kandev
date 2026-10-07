@@ -9,11 +9,16 @@ import { waitForHttp } from "../../helpers/causal-waits";
 
 test.describe("Mobile workspace repository sets", () => {
   const createdRepositorySetIds = new Set<string>();
+  const createdRepositoryIds = new Set<string>();
 
   test.afterEach(async ({ apiClient }) => {
     const setIds = [...createdRepositorySetIds];
     await Promise.all(setIds.map((setId) => apiClient.deleteRepositorySet(setId)));
     for (const setId of setIds) createdRepositorySetIds.delete(setId);
+    for (const repositoryId of createdRepositoryIds) {
+      await apiClient.rawRequest("DELETE", `/api/v1/repositories/${repositoryId}`);
+      createdRepositoryIds.delete(repositoryId);
+    }
   });
 
   test("scrolls a long branch list by touch without dismissing the editor", async ({
@@ -95,6 +100,18 @@ test.describe("Mobile workspace repository sets", () => {
   }) => {
     test.setTimeout(120_000);
     await testPage.setViewportSize({ width: 390, height: 844 });
+    const extraPath = path.join(backend.tmpDir, "repos", `mobile-editor-extra-${Date.now()}`);
+    fs.mkdirSync(extraPath, { recursive: true });
+    execFileSync("git", ["init", "--initial-branch=main", extraPath]);
+    const unusedRepository = await apiClient.createRepository(
+      seedData.workspaceId,
+      extraPath,
+      "main",
+      {
+        name: "Unused editor repository",
+      },
+    );
+    createdRepositoryIds.add(unusedRepository.id);
     const setName = `Mobile editor set ${Date.now()}`;
     const created = await apiClient.createRepositorySet(seedData.workspaceId, setName, [
       seedData.repositoryId,
@@ -140,6 +157,8 @@ test.describe("Mobile workspace repository sets", () => {
     await addRepository.tap();
     await testPage.getByRole("option", { name: /E2E Repo/ }).tap();
     await expect(testPage.getByRole("option", { name: /E2E Repo/ })).toHaveCount(0);
+    await expect(testPage.getByTestId("repository-set-add-repository-dropdown")).toHaveCount(0);
+    await expect(addRepository).toBeFocused();
     await expect(
       testPage.getByTestId(`repository-set-base-${seedData.repositoryId}`),
     ).toBeVisible();
@@ -164,6 +183,7 @@ test.describe("Mobile workspace repository sets", () => {
       cwd: seedData.repositoryPath,
       env: makeGitEnv(backend.tmpDir),
     });
+    await expect(addRepository).toBeEnabled();
     const basePicker = testPage.getByTestId(`repository-set-base-${seedData.repositoryId}`);
     await basePicker.tap();
     const dropdown = testPage.getByTestId(`repository-set-base-dropdown-${seedData.repositoryId}`);
