@@ -1,7 +1,7 @@
 ---
 id: "04-restart-and-oom-acceptance"
 title: "Prove restart recovery and validator OOM containment"
-status: blocked
+status: in_progress
 wave: 4
 depends_on:
   - "01-restart-safe-cleanup"
@@ -297,3 +297,39 @@ the correction; both cases now pass. Limits and accounting assertions are intact
 Evidence is retained privately under
 `/tmp/kandev-session-resilience-focused-artifacts-37630229003`.
 The full five-pass gate and live containment remain unaccepted.
+
+
+Focused CI run37635602757 at8086f05d selected five real scenarios with retries0:
+three retained cases passed; native restart and containment failed. Native
+inventory records exit0/Completed after SIGTERM, so its earlier pass does not
+establish ungraceful recovery. The fault now sends SIGKILL only after the same
+active trace/RUNNING barrier and requires recorded exit137. Conversation,
+prompt, Pod/PVC and workspace assertions remain unchanged.
+
+The user explicitly continued after the three-attempt checkpoint. A bounded
+local probe with the pinned Docker29.1.5 daemon reproduced the accounting failure
+under a host cgroup namespace: the mount root has no memory.max, while the
+companion's own group has its3GiB limit. Opt-in startup now resolves that group,
+verifies its budget, moves only startup into its init child, enables controllers
+there and places Docker descendants under its exact docker child. A process
+regression was observed red before correction. Other cases refuse wrong or
+unbounded parents and children outside that companion. Receipt probe paths are
+companion-relative, with a separate namespace path for diagnostics.
+
+A real64MiB Python probe now passes the actual runner receipt validator.
+Independent host inspection proves ancestry beneath the3GiB companion,
+64MiB memory,0.25 CPU and32 PID limits; observed child usage20.5MiB and
+startup parent delta18.3MiB. Exact temporary containers/anonymous data volumes
+were removed. This small daemon experiment is not full-image Kind, native
+recovery or deliberate child-OOM acceptance. Private receipt:
+`/tmp/kandev-session-resilience-cgroup-smoke-green.json`.
+
+The same CI head's backend failure was the persisted full-script migration test:
+it synthesized historical bytes from today's opt-in recipe and no longer matched
+the known migration hash. The test now uses the actual historical fixture,
+whose SHA256 matches the existing managed-script identity. Production migration
+is unchanged; customized scripts stay unchanged and historical repair does not
+enroll retained profiles in isolation. The original failure reproduced locally;
+targeted preparation/recovery/task-Pod race tests now pass in10.168s. All25
+worker recipe/runner tests pass. Live five-scenario CI acceptance remains pending;
+specifications remain draft and production rollout remains excluded.

@@ -18,9 +18,11 @@ if isolated:
     source = source.replace(host_line, host_line + "\n          - {name: FULL_WORKER_CHECK_MODE, value: 'isolated'}\n          - {name: FULL_WORKER_CHECK_IMAGE, value: '" + image + "'}")
     daemon_line = next(line for line in source.splitlines() if 'exec dockerd ' in line)
     helper = (root/'daemon-validation-preflight.sh').read_text()
-    startup = daemon_line.replace('exec dockerd ', 'dockerd ') + ' &\n'
-    startup += '            daemon_pid=$!\n            validation_budget=3221225472\n'
+    startup = '            validation_budget=3221225472\n'
     startup += "            validation_image='" + image + "'\n"
+    startup += '            start_validation_daemon() {\n'
+    startup += daemon_line.replace('exec dockerd ', '  dockerd ').replace('--cgroup-parent=docker', '--cgroup-parent="$validation_cgroup_parent"') + ' &\n'
+    startup += '              daemon_pid=$!\n            }\n'
     startup += '\n'.join('            ' + line if line else '' for line in helper.splitlines())
     source = source.replace(daemon_line, startup)
 print(source, end='')

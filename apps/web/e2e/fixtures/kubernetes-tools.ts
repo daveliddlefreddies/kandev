@@ -63,6 +63,7 @@ export type KubernetesPod = {
       ready?: boolean;
       restartCount: number;
       state?: Record<string, unknown>;
+      lastState?: { terminated?: { exitCode: number; reason?: string; signal?: number } };
     }>;
   };
 };

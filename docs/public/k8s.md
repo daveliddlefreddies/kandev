@@ -341,7 +341,9 @@ For heavy validation, the full-worker renderer also accepts `--isolated`. This
 opt-in mode runs supported Make and E2E entry points in one separately limited
 validation container under the existing Docker companion. Sibling sessions share
 its admission slot; missing resource-accounting proof fails instead of running
-checks in agent memory. Follow the [validation procedure](../../k8s/worker-images/full/README.md#isolate-repository-validation)
+checks in agent memory. Startup verifies the companion's own bounded cgroup,
+including when the runtime exposes a host cgroup namespace, and reports the
+failed preflight stage on refusal. Follow the [validation procedure](../../k8s/worker-images/full/README.md#isolate-repository-validation)
 for image, budgets, coverage and rollout. Direct provider shell commands bypass
 repository entry-point routing; use guarded commands or the explicit runner.
 

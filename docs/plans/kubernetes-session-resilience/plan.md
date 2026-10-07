@@ -1,6 +1,6 @@
 ---
 created: 2026-10-07
-status: blocked
+status: in_progress
 requirements:
   - REQ-EXECUTORS-K8S-FAILURE-RECOVERY-001
   - REQ-EXECUTORS-K8S-VALIDATION-001
@@ -168,3 +168,12 @@ bounded image verification and runs all five new/retained Kubernetes scenarios
 with zero retries, rejecting skips or missing executed results. Ordinary ready
 PR checks retain their existing paths. The focused job remains unexecuted at
 this checkpoint; no specification or work-order live status is promoted.
+
+
+After focused run37635602757 failed two new scenarios (three retained passes,
+retries0/skips0), the user authorized targeted corrections and fresh CI acceptance
+at the required three-attempt checkpoint. Order04 is in progress again. Its
+results record the abnormal restart fault, bounded own-cgroup mapping, actual
+small daemon/independent host accounting proof, and historical migration fixture
+correction. These do not accept the full Kind/OOM/native gate; new specifications
+remain draft until that gate and affected CI checks pass.

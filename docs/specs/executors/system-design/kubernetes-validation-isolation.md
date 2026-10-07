@@ -95,15 +95,22 @@ Admission is conservative and serial rather than a new scheduler. All CPU and
 memory consumed by the check, its disposable E2E backend, and browser descendants
 must be charged under the separately limited Docker companion. Validate nested
 cgroup ancestry and counters through the existing full-worker accounting fixture
-on the actual runtime. Add a companion startup preflight with compatible cgroup-v2, cgroupfs driver,
-configured relative parent and a bounded accounting probe. Start dockerd, remove
-any previous receipt, then run a temporary 64 MiB probe. From the companion,
+on the actual runtime. Add a companion startup preflight with compatible cgroup-v2,
+cgroupfs driver and a bounded accounting probe. Resolve the startup process's
+own cgroup from `/proc/self/cgroup`; a privileged CRI container may expose the
+host namespace, where the mount root is not the companion. Verify that group's
+finite 3 GiB budget before changing it. Move the startup process into its `init`
+child and enable CPU/memory/PID controllers within that bounded group. Configure
+dockerd with its exact `docker` descendant as parent. Remove any previous receipt,
+start dockerd, then run a temporary 64 MiB probe. From the companion,
 verify the probe PID's cgroup is a descendant of the companion and its counters
 charge that parent; read the companion's finite memory.max and compare it with
 policy. Publish an atomic, non-secret receipt under the shared socket directory
 only after proof succeeds, keyed to daemon identity and a startup generation.
 Preparation and the runner require this receipt plus matching live Docker
 identity. Unknown receipts, mismatched budgets or missing proof fail closed.
+The receipt's probe path is companion-relative; its separate companion path
+records the namespace mapping. Preflight failure logs name the failed stage.
 Do not mount the companion's cgroup filesystem into the agent or validator.
 Embed the startup helper in the rendered template using the existing shell
 command surface; no ConfigMap or extra grant is needed. It bounds daemon

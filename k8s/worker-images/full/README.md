@@ -52,8 +52,9 @@ Schedule these Pods only on a worker node pool isolated from trusted workloads.
 
 The daemon reads the Pod interface MTU and applies it to default and
 user-defined bridges. It selects Docker's cgroupfs driver with a relative
-`docker` parent so nested container cgroups remain below the daemon container's
-cgroup on compatible cgroup-v2 runtimes. Verify both properties on the actual
+`docker` parent in the default template. This requires a compatible namespace;
+the isolated renderer resolves and verifies the companion's actual bounded group
+before placing nested containers under its `docker` descendant. Verify both properties on the actual
 CNI and container runtime before rollout.
 
 The preparation script waits at most 60 seconds (plus a bounded client call)
@@ -115,8 +116,10 @@ image. Existing rendering remains unchanged:
 bash k8s/worker-images/full/render-template.sh --isolated registry/image@sha256:<digest>
 ```
 
-The companion verifies cgroup-v2 ancestry and memory charging with a bounded
-64 MiB probe before preparation enables validation. A missing/mismatched receipt,
+The companion resolves its own cgroup rather than assuming the mount root is
+bounded, then verifies cgroup-v2 ancestry and memory charging with a bounded
+64 MiB probe before preparation enables validation. Startup refuses a mismatched
+3 GiB parent budget and reports its failed preflight stage. A missing/mismatched receipt,
 unavailable image or incompatible runtime fails preparation; checks do not fall
 back into agent memory. This requires the updated worker image containing
 `/opt/full-worker/check.py` and the rendered startup command. Do not paste a

@@ -117,11 +117,15 @@ test("main restart preserves native conversation and one continuation", async ({
     process.kill(backend.pid()!, "SIGSTOP");
     paused = true;
     try {
-      execInKubernetesPod(cluster, before.metadata.name, ["sh", "-c", "kill 1"]);
+      execInKubernetesPod(cluster, before.metadata.name, ["sh", "-c", "kill -KILL 1"]);
     } catch {
       /* PID 1 closes its exec stream. */
     }
-    await waitForKubernetesRestart(cluster, before.metadata.name, restarts);
+    const restarted = await waitForKubernetesRestart(cluster, before.metadata.name, restarts);
+    const termination = restarted.status?.containerStatuses?.find(
+      (row) => row.name === "kandev-agent",
+    )?.lastState?.terminated;
+    expect(termination?.exitCode, "Active main process must be killed abnormally").toBe(137);
     await waitForKubernetesPod(cluster, task.id, task.session_id!);
     process.kill(backend.pid()!, "SIGCONT");
     paused = false;
@@ -172,6 +176,7 @@ test("main restart preserves native conversation and one continuation", async ({
       body: JSON.stringify({
         pod: before.metadata,
         claim: claim.metadata,
+        termination,
         original,
         loads,
         prompts: rows.filter((row) => row.event === "prompt"),
