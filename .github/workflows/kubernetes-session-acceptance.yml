@@ -113,6 +113,7 @@ jobs:
       - name: Run five real Kubernetes acceptance scenarios
         working-directory: apps/web
         env:
+          VERSION: 0.0.0-e2e.${{ github.sha }}
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ github.workspace }}/apps/web/e2e/blob-report
           PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/kubernetes-session-acceptance-results.json
         run: |

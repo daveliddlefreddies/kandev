@@ -154,7 +154,6 @@ A subsequent focused real run is pending; source/mock tests remain separate from
 runtime acceptance. Existing recovery package stays historically blocked until
 its real retained scenarios execute successfully.
 
-
 The next run completed Kind image import within the 600-second operation bound.
 The new restart scenario executed live through main restart and retained its
 Pod/workspace, then failed because its idle precondition reconnects without a
@@ -267,3 +266,17 @@ the fix. No image build or acceptance assertion executed in the rejected run.
 Pinned actionlint1.7.7 passed workflow schema/expression validation after the
 correction (external ShellCheck disabled); focused workflow shell blocks had
 separately passed bash syntax validation. Formatting and whitespace passed.
+
+Focused CI run37626556444 passed the bounded full-worker build and real
+tool/source/browser verification. Its observed image ID was
+`sha256:3201b81d6659d11d25232828693552fd109e4abee013c06dada6f39239855e16`.
+All five scenarios then failed in compact-runtime fixture setup before any fault
+assertion: shallow checkout made the default app version a bare Git SHA, rejected
+by the canonical release-helper asset builder. The ordinary E2E build explicitly
+uses a release-compatible test version. The focused managed build now uses that
+same `0.0.0-e2e.<Git SHA>` convention. A regression was observed red before the
+fix and now invokes the actual release asset builder with the configured version.
+The five-failure JSON, blob and build log are retained privately under
+`/tmp/kandev-session-resilience-focused-artifacts-37626556444`.
+Kind was never allocated; marker-bound cleanup correctly did nothing.
+This setup failure does not accept recovery or containment criteria.

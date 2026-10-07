@@ -83,6 +83,28 @@ class E2EWorkflowContractTest(unittest.TestCase):
         self.assertIn("kandev-full-worker-acceptance-build.log", workflow)
         self.assertIn("kubernetes-session-acceptance-results.json", workflow)
 
+    def test_session_acceptance_build_identity_is_valid_for_compact_runtime(self):
+        workflow = SESSION_ACCEPTANCE_WORKFLOW.read_text()
+        execute = workflow.split("      - name: Run five real Kubernetes acceptance scenarios\n", 1)[1].split("      - name:", 1)[0]
+        configured = re.search(r"^\s+VERSION: (.+)$", execute, re.MULTILINE)
+        self.assertIsNotNone(configured, "shallow checkout needs an explicit release-compatible app version")
+        commit = "a" * 40
+        version = configured.group(1).strip('"').replace("${{ github.sha }}", commit)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            helpers = root / "bin"
+            helpers.mkdir()
+            for platform in ("linux-amd64", "linux-arm64", "darwin-amd64", "darwin-arm64"):
+                helper = helpers / f"agentctl-{platform}"
+                helper.write_bytes(b"fixture helper\n")
+                helper.chmod(0o755)
+            result = subprocess.run([
+                "node", str(REPO_ROOT / "scripts/release/remote-helper-assets.mjs"), "build",
+                "--bin-dir", str(helpers), "--output-dir", str(root / "artifact"),
+                "--version", version, "--commit", commit, "--stable", "true",
+            ], capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_session_acceptance_requires_five_executed_passes(self):
         verify = REPO_ROOT / ".github/scripts/verify-kubernetes-session-acceptance.cjs"
         tests = [{"expectedStatus": "passed", "results": [{"status": "passed", "retry": 0}]} for _ in range(5)]
