@@ -1,5 +1,6 @@
 import { test, expect } from "../../fixtures/test-base";
 import { useRegularMode } from "../../helpers/regular-mode";
+import { openCreateTaskDialog } from "../../helpers/create-task-dialog";
 import { KanbanPage } from "../../pages/kanban-page";
 import { SessionPage } from "../../pages/session-page";
 import { expectTaskDescription } from "../../pages/task-description-editor";
@@ -62,6 +63,12 @@ test.describe("Task creation", () => {
         workflow_id: hidden.id,
         workflow_step_id: hiddenStart.id,
       });
+
+      await testPage.goto(`/t/${sourceTask.id}`);
+      const navigationExpand = testPage.getByTestId("sidebar-navigation-expand");
+      await expect(navigationExpand).toHaveAttribute("aria-expanded", "false");
+      await openCreateTaskDialog(testPage);
+      await expect(navigationExpand).toHaveAttribute("aria-expanded", "true");
 
       await testPage.goto(`/t/${sourceTask.id}`);
       const navigationExpand = testPage.getByTestId("sidebar-navigation-expand");
