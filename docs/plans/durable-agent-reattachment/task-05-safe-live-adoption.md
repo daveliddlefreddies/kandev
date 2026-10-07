@@ -1155,3 +1155,39 @@ Hosted replacement-head validation remains pending.
 
 The full DnD spec also passed three repetitions (six tests) with `--retries=0`
 using the rebuilt artifacts. This is local evidence, not a hosted CI verdict.
+
+### PR #3598 current-main conflicts and validator budget (2026-10-07)
+
+Integrated main's task-navigation, Git-refresh, task-ranking, native MCP,
+disk-usage and plugin-focus changes. The Git bridge conflict now retains both
+`holdReadyNotifications` and `dropPendingStatusEvents`. The walkthrough runner
+keeps its deterministic shared-deadline test rather than restoring wall-clock
+sleep sensitivity. Its 17 tests passed:
+`python3 .github/scripts/pr-walkthrough-runner_test.py`.
+
+Merged runtime race checks passed through MCP config, lifecycle and task
+handlers: from `apps/backend`, `go test -race ./internal/agent/mcpconfig
+./internal/agent/runtime/lifecycle ./internal/task/handlers -run
+'Test.*(CursorMCP|CursorProjectMCP|RuntimeReplacement|StreamDisconnectDoesNotReplaceCompletedPromptOutcome)'
+-count=1`. Focused ESLint and web typecheck passed. Harness validation passed
+19 harness-linter tests, all 203 harness files, 36 spec-linter tests, full spec
+lint and the targeted `harness-lint` pre-commit hook for `apps/web/AGENTS.md`.
+
+Rebuilt Git-refresh desktop tests passed five first attempts; matching mobile
+tests passed four first attempts, sequentially from `apps/web`:
+`E2E_PORT_OFFSET=0 pnpm e2e:run tests/git/changes-panel-refresh-recovery.spec.ts
+tests/git/diff-refresh-continuity.spec.ts --project=chromium --retries=0`, then
+`E2E_PORT_OFFSET=0 pnpm e2e:run --no-build
+tests/git/mobile-changes-panel-refresh-recovery.spec.ts
+tests/git/mobile-diff-refresh-continuity.spec.ts --project=mobile-chrome
+--retries=0`.
+
+The trusted live documentation evaluator reproduced the hosted generic error:
+references exceeded its 200-document limit. A local exact-loader candidate-tree
+preflight also failed at 200 reads. Moved only this PR's sidebar isolation
+appendix into the focused [sidebar browser isolation package](../sidebar-browser-isolation/plan.md),
+preserving the receipt verbatim and the original feature work order unchanged.
+The same loader then passed 74 work orders with 199 referenced documents.
+Catalog validation passed (365 decisions, 1444 specs). This is local evidence;
+fresh pushed-head CI, native containment and targeted durable PostgreSQL/live
+harness gates remain external and pending.

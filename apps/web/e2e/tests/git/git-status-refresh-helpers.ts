@@ -111,6 +111,7 @@ type GitRefreshBridgeState = {
   requests: string[];
   responses: GitRefreshTrace[];
   pendingEventsDropped: GitStatusSnapshot[];
+  pendingNotifications: GitStatusSnapshot[];
   readyNotifications: GitStatusSnapshot[];
   holdReadyNotifications: boolean;
   heldReadyNotifications: Array<{ frame: string; socket: BridgeSocket }>;
@@ -122,6 +123,7 @@ type GitRefreshBridgeState = {
   commitDiffRequestCount: number;
   commitDiffResponseCount: number;
   heldCommitDiffRequests: Array<{ frame: string; server: BridgeSocket }>;
+  dropPendingStatusEvents: boolean;
 };
 
 function holdCommitDiffRequest(
@@ -234,8 +236,11 @@ function consumeServerFrame(part: string, state: GitRefreshBridgeState): boolean
   const event = frame ? statusEvent(frame) : null;
   const detailState = event?.payload?.status?.detail_state;
   if (detailState === "pending" && event) {
-    state.pendingEventsDropped.push(event);
-    return false;
+    state.pendingNotifications.push(event);
+    if (state.dropPendingStatusEvents) {
+      state.pendingEventsDropped.push(event);
+      return false;
+    }
   }
   if (detailState === "ready" && event) state.readyNotifications.push(event);
   return true;
@@ -292,12 +297,16 @@ function connectGitRefreshBridge(socket: ClientBridgeSocket, state: GitRefreshBr
 
 export async function routeGitStatusRefresh(
   page: Page,
-  { holdReadyNotifications = false }: { holdReadyNotifications?: boolean } = {},
+  {
+    holdReadyNotifications = false,
+    dropPendingStatusEvents = true,
+  }: { holdReadyNotifications?: boolean; dropPendingStatusEvents?: boolean } = {},
 ) {
   const state: GitRefreshBridgeState = {
     requests: [],
     responses: [],
     pendingEventsDropped: [],
+    pendingNotifications: [],
     readyNotifications: [],
     holdReadyNotifications,
     heldReadyNotifications: [],
@@ -309,6 +318,7 @@ export async function routeGitStatusRefresh(
     commitDiffRequestCount: 0,
     commitDiffResponseCount: 0,
     heldCommitDiffRequests: [],
+    dropPendingStatusEvents,
   };
 
   await page.routeWebSocket(/\/ws$/, (socket) => connectGitRefreshBridge(socket, state));
@@ -385,6 +395,9 @@ export async function routeGitStatusRefresh(
     droppedPendingCount() {
       return state.pendingEventsDropped.length;
     },
+    pendingNotificationCount() {
+      return state.pendingNotifications.length;
+    },
     readyNotificationCount() {
       return state.readyNotifications.length;
     },
@@ -404,6 +417,15 @@ export async function routeGitStatusRefresh(
           message: "the pending Git status notification should be deliberately dropped",
         })
         .toBeGreaterThan(0);
+    },
+    async waitForPendingStatus(afterCount = 0) {
+      await expect
+        .poll(() => state.pendingNotifications.length, {
+          timeout: 30_000,
+          message: "the tracker should publish its pending Git status without bridge suppression",
+        })
+        .toBeGreaterThan(afterCount);
+      return state.pendingNotifications.at(-1)!;
     },
     async waitForReadyNotification() {
       await expect
