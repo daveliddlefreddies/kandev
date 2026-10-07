@@ -166,6 +166,20 @@ function buildRecoveryChoices({
   return choices;
 }
 
+function SessionRecoveryFailure({ error, guarded }: { error: Error; guarded: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <div data-testid="session-recovery-error" className="mt-2 min-w-0 text-xs">
+      <p role="status">
+        {guarded
+          ? sanitizeSessionErrorDetails(error.message, 240)
+          : t("task:failedToResumeSession")}
+      </p>
+      <SessionErrorDetails>{error.message}</SessionErrorDetails>
+    </div>
+  );
+}
+
 export function SessionRecoveryActionButtons({
   actions,
   taskId,
@@ -188,6 +202,10 @@ export function SessionRecoveryActionButtons({
     continuationDetails,
     recoveryNotice,
     managedCloneRecoveryStamp,
+    workspaceRecovery,
+    workspaceRecoveryRepositoryName,
+    workspaceRecoveryStatusCheck,
+    checkWorkspaceRecoveryStatus,
     providerRestoredResumeEligible,
     handleRecover,
     handleRestore,
@@ -226,14 +244,7 @@ export function SessionRecoveryActionButtons({
   return (
     <>
       {recoveryError && (
-        <div data-testid="session-recovery-error" className="mt-2 min-w-0 text-xs">
-          <p role="status">
-            {guardDetails
-              ? sanitizeSessionErrorDetails(recoveryError.message, 240)
-              : t("task:failedToResumeSession")}
-          </p>
-          <SessionErrorDetails>{recoveryError.message}</SessionErrorDetails>
-        </div>
+        <SessionRecoveryFailure error={recoveryError} guarded={Boolean(guardDetails)} />
       )}
       {recoveryNotice && <SessionRecoveryNotice message={recoveryNotice} />}
       <RecoveryActions
@@ -246,6 +257,10 @@ export function SessionRecoveryActionButtons({
         busy={busyAction !== null}
         busyAction={busyAction}
         blocked={Boolean(guardDetails && !guardDetails.retryable)}
+        workspaceRecovery={workspaceRecovery}
+        workspaceRecoveryRepositoryName={workspaceRecoveryRepositoryName}
+        workspaceRecoveryStatusCheck={workspaceRecoveryStatusCheck}
+        onCheckWorkspaceRecoveryStatus={() => void checkWorkspaceRecoveryStatus()}
       />
       {actions
         .filter((action) => !sessionRecoveryAction(action))

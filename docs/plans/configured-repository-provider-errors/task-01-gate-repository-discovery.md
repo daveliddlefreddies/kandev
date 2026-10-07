@@ -109,3 +109,21 @@ None.
 - Verification passed: 13 repository-hook tests, 6 GitLab tests, 6 Azure
   DevOps tests, 56 focused frontend tests, both focused Playwright tests,
   frontend typecheck, targeted ESLint, and specification linting.
+
+
+### PR #3598 remote picker fixture remediation, 2026-10-07
+
+The shared desktop dialog opener could click an inert navigation item after a
+prior test persisted a zero-height sidebar. Added a collapsed-navigation setup
+to the repository-loading case. Before the repair, its first attempt and the
+existing suite retry both failed with the same pointer obstruction reported by
+CI. The opener now expands navigation through its visible control before
+clicking New task. The suite retry override is zero; production UI is unchanged.
+
+Reproduction command: `pnpm --dir apps/web e2e:run --host --no-build --shards 1
+--project chromium tests/task/create-task-remote-repo.spec.ts -- --grep
+'keeps the unified input fixed' --retries=0`. Repeat validation adds
+`--repeat-each=3`; results are recorded below.
+
+Collapsed-navigation regression: all three repeat runs passed with retries
+disabled. Focused ESLint passed with zero warnings.

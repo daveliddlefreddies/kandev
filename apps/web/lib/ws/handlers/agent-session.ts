@@ -568,6 +568,7 @@ function resolveWorkspaceEventEnvironmentId(
 function workspaceRestorationTarget(
   store: StoreApi<AppState>,
   payload: TaskSessionAgentctlPayload,
+  includeFailed = false,
 ): { sessionId: string; attempt: WorkspaceRestorationAttempt } | null {
   const sessionId = payload.session_id?.trim() ?? "";
   if (!sessionId) return null;
@@ -579,7 +580,13 @@ function workspaceRestorationTarget(
   );
   if (!environmentId) return null;
   const attempt = state.workspaceRestoration?.byEnvironmentId?.[environmentId];
-  if (!attempt || attempt.status !== "pending" || attempt.sessionId !== sessionId) return null;
+  if (
+    !attempt ||
+    (attempt.status !== "pending" && !(includeFailed && attempt.status === "error")) ||
+    attempt.sessionId !== sessionId
+  ) {
+    return null;
+  }
   return { sessionId, attempt };
 }
 
@@ -589,7 +596,9 @@ function settleWorkspaceRestorationFromAgentctl(
   payload: TaskSessionAgentctlPayload,
   status: "ready" | "error",
 ): void {
-  const target = workspaceRestorationTarget(store, payload);
+  // Readiness from the same environment also supersedes a local restore error
+  // recorded while an accepted server-side recovery was still running.
+  const target = workspaceRestorationTarget(store, payload, status === "ready");
   if (!target) return;
   const state = store.getState();
 

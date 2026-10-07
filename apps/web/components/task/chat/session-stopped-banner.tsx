@@ -143,7 +143,10 @@ function useStoppedRecoveryChoices(
   onRelocateRequested: () => void,
 ): RecoveryChoice[] {
   const { t } = useTranslation();
-  if (props.actions.managedCloneRecoveryStamp) {
+  if (
+    props.actions.managedCloneRecoveryStamp ||
+    props.actions.workspaceRecoveryMatchesCurrentFailure
+  ) {
     return [managedCloneRecoveryChoice(onRelocateRequested, t)];
   }
   if (props.uncertainDelivery && props.mode !== "completed") {
@@ -279,7 +282,7 @@ function StoppedSessionMessages({
   return (
     <>
       <p className="wrap-anywhere text-sm">{title}</p>
-      {managedCloneRecovery && (
+      {managedCloneRecovery && !props.actions.workspaceRecovery && (
         <p className="mt-1 wrap-anywhere text-sm text-muted-foreground">
           {t("task:managedCloneRelocationBody")}
         </p>
@@ -332,6 +335,22 @@ function StoppedSessionRecoveryControls({
       busy={busyAction !== null}
       busyAction={busyAction}
       blocked={blocked}
+      workspaceRecovery={
+        choices.some((choice) => choice.kind === "relocate_and_resume") ||
+        props.actions.workspaceRecovery?.runner_live
+          ? props.actions.workspaceRecovery
+          : null
+      }
+      workspaceRecoveryReadyApplies={props.actions.workspaceRecoveryMatchesCurrentFailure ?? false}
+      workspaceRecoveryRepositoryName={props.actions.workspaceRecoveryRepositoryName}
+      workspaceRecoveryStatusCheck={
+        props.actions.managedCloneRecoveryStamp ||
+        props.actions.workspaceRecoveryMatchesCurrentFailure ||
+        props.actions.workspaceRecovery?.runner_live
+          ? props.actions.workspaceRecoveryStatusCheck
+          : "idle"
+      }
+      onCheckWorkspaceRecoveryStatus={() => void props.actions.checkWorkspaceRecoveryStatus()}
     />
   );
 }
@@ -343,7 +362,9 @@ function StoppedSessionContent(props: StoppedRecoveryProps) {
   const { busyAction, guardDetails } = props.actions;
   const completed = props.mode === "completed";
   const blocked = Boolean(guardDetails && !guardDetails.retryable);
-  const managedCloneRecovery = Boolean(props.actions.managedCloneRecoveryStamp);
+  const managedCloneRecovery =
+    Boolean(props.actions.managedCloneRecoveryStamp) ||
+    props.actions.workspaceRecoveryMatchesCurrentFailure === true;
   const choices = useStoppedRecoveryChoices(props, profileExists, () =>
     setRelocationConfirmationOpen(true),
   );

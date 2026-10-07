@@ -10,7 +10,7 @@ import { SidebarFilterPopoverPage } from "../../pages/sidebar-filter-popover";
 import { KanbanPage } from "../../pages/kanban-page";
 
 export async function seedSelectedFilters(api: ApiClient, seed: SeedData, tmpDir: string) {
-  for (const suffix of ["A", "B", "C", "D"]) {
+  for (const suffix of ["A", "B", "C", "D", "Remote"]) {
     const directory = path.join(tmpDir, `filter-repo-${suffix}`);
     fs.mkdirSync(directory, { recursive: true });
     const env = makeGitEnv(tmpDir);
@@ -18,10 +18,17 @@ export async function seedSelectedFilters(api: ApiClient, seed: SeedData, tmpDir
     execFileSync("git", ["commit", "--allow-empty", "-m", "init"], { cwd: directory, env });
     await api.createRepository(seed.workspaceId, directory, "main", {
       name: `Filter repository ${suffix}`,
+      ...(suffix === "Remote"
+        ? { provider: "github", provider_owner: "filter-owner", provider_name: "filter-repo" }
+        : {}),
     });
   }
   const { repositories } = await api.listRepositories(seed.workspaceId);
-  const source = repositories.map((repository) => repository.name);
+  const source = repositories.map((repository) =>
+    repository.provider_owner && repository.provider_name
+      ? `${repository.provider_owner}/${repository.provider_name}`
+      : repository.name,
+  );
   const selected = source.slice(-2);
   const unselected = source.slice(0, -2);
   const stepIds: string[] = [];

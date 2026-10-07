@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSessionRecoveryActions } from "./use-session-recovery-actions";
+import type { WorkspaceRecoveryProjection } from "@/lib/types/http";
 
 type RecoveryEligibilityState = {
   taskSessions: {
@@ -14,6 +15,8 @@ type RecoveryEligibilityState = {
         downstream_acp_session_id?: string;
         is_passthrough?: boolean;
         metadata?: Record<string, unknown> | null;
+        task_environment_id?: string;
+        workspace_recovery?: WorkspaceRecoveryProjection | null;
       }
     >;
   };
@@ -29,11 +32,14 @@ type RecoveryEligibilityState = {
       cli_passthrough: boolean;
     }[];
   };
+  setWorkspaceRecoveryProjection: ReturnType<typeof vi.fn>;
 };
 
 const mocks = vi.hoisted(() => ({
   requestSessionRecover: vi.fn(),
   restoreSessionWorkspace: vi.fn(),
+  getWorkspaceRecoveryStatus: vi.fn(),
+  setWorkspaceRecoveryProjection: vi.fn(),
   managedCloneRelocationRecoveryDetails: vi.fn().mockReturnValue(null),
   appState: null as unknown as RecoveryEligibilityState,
 }));
@@ -48,6 +54,7 @@ vi.mock("@/lib/services/session-recovery-service", () => ({
   contextContinuationDetails: () => null,
   requestSessionRecover: mocks.requestSessionRecover,
   restoreSessionWorkspace: mocks.restoreSessionWorkspace,
+  getWorkspaceRecoveryStatus: mocks.getWorkspaceRecoveryStatus,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -80,6 +87,7 @@ function emptyRecoveryEligibilityState(): RecoveryEligibilityState {
     kanban: { tasks: [] },
     quickChat: { sessions: [] },
     agentProfiles: { items: [] },
+    setWorkspaceRecoveryProjection: mocks.setWorkspaceRecoveryProjection,
   };
 }
 
@@ -93,6 +101,7 @@ function eligibleRecoveryState(): RecoveryEligibilityState {
           execution_profile_id: "profile-1",
           agent_profile_id: "profile-other",
           downstream_acp_session_id: "native-session-1",
+          task_environment_id: "environment-1",
         },
       },
     },
@@ -114,6 +123,7 @@ function eligibleRecoveryState(): RecoveryEligibilityState {
         },
       ],
     },
+    setWorkspaceRecoveryProjection: mocks.setWorkspaceRecoveryProjection,
   };
 }
 
