@@ -91,6 +91,48 @@ async function createProject(
 }
 
 test.describe("Office New Task dialog", () => {
+  test("project sources attach before launch", async ({
+    testPage,
+    officeApi,
+    dialogSeed,
+    apiClient,
+    seedData,
+  }) => {
+    const officeRepository = await apiClient.createRepository(
+      dialogSeed.workspaceId,
+      seedData.repositoryPath,
+    );
+    const project = (await officeApi.createProject(
+      dialogSeed.workspaceId,
+      "New Task Dialog Project Source E2E",
+      [seedData.repositoryPath],
+    )) as { id: string; name: string };
+    expect(project.id).toBeTruthy();
+
+    const dialog = await openNewTaskDialog(testPage);
+    await dialog.getByPlaceholder("Task title").fill("New Task Dialog Project Source E2E");
+    await dialog.getByRole("button", { name: "Project" }).click();
+    await testPage.getByRole("button", { name: project.name, exact: true }).click();
+
+    const created = waitForHttp(testPage, "POST", /^\/api\/v1\/tasks$/);
+    await dialog.getByTestId("new-task-create-button").click();
+    const response = await created;
+    const body = (await response.json()) as {
+      id?: string;
+      repositories?: Array<{ repository_id: string }>;
+    };
+    expect(body.id).toBeTruthy();
+    expect(body.repositories?.map((repository) => repository.repository_id)).toEqual([
+      officeRepository.id,
+    ]);
+
+    const stored = await apiClient.getTask(body.id as string);
+    expect(stored.workspace_id).toBe(dialogSeed.workspaceId);
+    expect(stored.repositories?.map((repository) => repository.repository_id)).toEqual([
+      officeRepository.id,
+    ]);
+  });
+
   test("creating a task with an assignee seats the runner and shows no stages picker", async ({
     testPage,
     officeApi,
