@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 import subprocess
 import tempfile
+import textwrap
 import unittest
 
 
@@ -44,6 +45,40 @@ def job_block(workflow: str, job: str, next_job: str) -> str:
 
 
 class E2EWorkflowContractTest(unittest.TestCase):
+    def test_session_browser_setup_uses_bounded_https_mirror_before_install(self):
+        workflow = SESSION_ACCEPTANCE_WORKFLOW.read_text()
+        step = workflow.split('      - name: Prepare host Chromium\n', 1)[1].split('      - name:', 1)[0]
+        self.assertIn('timeout-minutes: 10', step)
+        self.assertIn('run: |', step)
+        script = textwrap.dedent(step.split('run: |\n', 1)[1])
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            commands = {
+                'sudo': 'exec "$@"',
+                'tee': '''case "$1" in
+/etc/apt/apt-mirrors.txt|/etc/apt/apt.conf.d/99kandev-acceptance-timeouts)
+  exec /usr/bin/tee "$APT_ROOT/$(basename "$1")";;
+*) exit 2;;
+esac''',
+                'pnpm': '''test "$*" = 'exec playwright install --with-deps chromium' || exit 2
+test -s "$APT_ROOT/apt-mirrors.txt" && test -s "$APT_ROOT/99kandev-acceptance-timeouts" || exit 3
+echo installed''',
+            }
+            for name, body in commands.items():
+                command = root/name
+                command.write_text('#!/bin/sh\n' + body + '\n')
+                command.chmod(0o755)
+            result = subprocess.run(['bash', '-ceu', script], capture_output=True, text=True,
+                timeout=5, env={**os.environ, 'PATH': f"{root}:{os.environ['PATH']}", 'APT_ROOT': str(root)})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('installed', result.stdout)
+            self.assertEqual((root/'apt-mirrors.txt').read_text(), 'https://archive.ubuntu.com/ubuntu/\n')
+            config = root/'99kandev-acceptance-timeouts'
+            parsed = subprocess.run(['apt-config', '-c', str(config), 'dump'],
+                capture_output=True, text=True, timeout=5, check=True).stdout
+            for key, value in (('http::Timeout', '30'), ('https::Timeout', '30'), ('Retries', '2')):
+                self.assertIn(f'Acquire::{key} "{value}";', parsed)
+
     def test_session_acceptance_uses_one_read_only_draft_job(self):
         workflow = SESSION_ACCEPTANCE_WORKFLOW.read_text()
         self.assertIn("pull_request:", workflow)

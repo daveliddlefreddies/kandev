@@ -177,3 +177,11 @@ results record the abnormal restart fault, bounded own-cgroup mapping, actual
 small daemon/independent host accounting proof, and historical migration fixture
 correction. These do not accept the full Kind/OOM/native gate; new specifications
 remain draft until that gate and affected CI checks pass.
+
+
+Fresh acceptance run37683760716 was cancelled during a26-minute stalled APT/
+Chromium setup, before image verification or Kind allocation. Its logs establish
+an unreachable Azure Ubuntu mirror. The focused-job-only correction uses the
+official HTTPS archive and bounded transport/step deadlines; acceptance assertions
+remain unchanged. No new native/containment failure or pass is inferred from this
+pre-test interruption. Order04 and the complete live gate remain in progress.

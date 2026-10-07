@@ -333,3 +333,19 @@ enroll retained profiles in isolation. The original failure reproduced locally;
 targeted preparation/recovery/task-Pod race tests now pass in10.168s. All25
 worker recipe/runner tests pass. Live five-scenario CI acceptance remains pending;
 specifications remain draft and production rollout remains excluded.
+
+
+The first post-checkpoint focused run37683760716 at1a6bd851a was cancelled
+before worker build or Kind allocation after Chromium dependency setup stalled
+for26 minutes. Completed logs show repeated unreachable HTTP Azure archive
+requests from APT's mirrorlist; Ubuntu's HTTPS archive answered release requests,
+but package-index acquisition then stopped progressing. No fault scenario or
+five-pass report executed. The focused disposable job now replaces only its
+Ubuntu mirrorlist with the official HTTPS archive, configures30-second HTTP/HTTPS
+transport timeouts and2 retries, and bounds the Chromium setup step at10 minutes.
+Package authentication and the full five-scenario/zero-retry gate are unchanged.
+A workflow/process regression was observed red before correction; it executes the
+real setup shell with redirected system writes, requires configuration before
+Playwright invocation and validates timeout syntax with the actual APT parser.
+All24 workflow contracts,27 action-pinning checks, pinned actionlint and shell
+syntax pass. No operator machine or production worker APT configuration changed.

@@ -69,7 +69,14 @@ jobs:
 
       - name: Prepare host Chromium
         working-directory: apps/web
-        run: pnpm exec playwright install --with-deps chromium
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          # The default Azure mirror stalled this disposable job before tests.
+          printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          printf '%s\n' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' 'Acquire::Retries "2";' \
+            | sudo tee /etc/apt/apt.conf.d/99kandev-acceptance-timeouts >/dev/null
+          pnpm exec playwright install --with-deps chromium
 
       - name: Install pinned Kind and kubectl
         env:
