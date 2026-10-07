@@ -1124,3 +1124,11 @@ validation passed all 19 cases with retries disabled, using the managed host
 runner with one worker. Pushed-head hosted CI remains pending at this checkpoint.
 Manual native Windows/macOS and targeted durable PostgreSQL/live-harness
 release gates remain open.
+
+Latest-main workflow integration: focused model/repository/service/handler
+race checks passed using `GOMAXPROCS=4 go test -p 2 -race -count=1
+-timeout=10m ./internal/task/models ./internal/task/repository/sqlite
+./internal/task/service ./internal/task/handlers -run 'Workflow|Process'`.
+The final fresh-build mobile recovery file passed all five first attempts with
+retries disabled. Full spec/catalog/harness checks and the 58-work-order
+coverage preflight passed. Pushed-head CI remains an external pending gate.

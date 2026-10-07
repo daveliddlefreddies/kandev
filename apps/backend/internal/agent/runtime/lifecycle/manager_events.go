@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	toolStatusComplete = "complete"
-	toolStatusFailed   = "failed"
-	toolStatusError    = "error"
+	toolStatusComplete  = "complete"
+	toolStatusFailed    = "failed"
+	toolStatusError     = "error"
+	agentEventReasoning = "reasoning"
 )
 
 // handleMessageChunkEvent handles a "message_chunk" agent event, accumulating and flushing on newlines.
@@ -92,7 +93,7 @@ func (m *Manager) publishStreamEvidence(execution *AgentExecution, event agentct
 	if event.PromptGeneration == 0 {
 		event.PromptGeneration = execution.promptGenerationSnapshot()
 	}
-	if event.Type == "reasoning" {
+	if event.Type == agentEventReasoning {
 		event.Text = event.ReasoningText
 	}
 	event.CanonicalProjection = false
@@ -787,7 +788,7 @@ func (m *Manager) handleAvailableCommandsEvent(execution *AgentExecution, event 
 // dedicated empty-turn fallback in handleCompleteEventMarkState.
 var turnContentEventTypes = map[string]struct{}{
 	"message_chunk":      {},
-	"reasoning":          {},
+	agentEventReasoning:  {},
 	"tool_call":          {},
 	"tool_update":        {},
 	"plan":               {},
@@ -1509,7 +1510,7 @@ func (m *Manager) handleAgentEventWithoutPublication(execution *AgentExecution, 
 	case "message_chunk":
 		m.handleMessageChunkEvent(execution, *event)
 		return true
-	case "reasoning":
+	case agentEventReasoning:
 		m.handleReasoningEvent(execution, *event)
 		return true
 	case streams.EventTypeResponseAttemptReset:
