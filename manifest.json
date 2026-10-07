@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-10-07T10:36:04.331Z",
+  "assets": [
+    {
+      "name": "system-disk-usage-desktop",
+      "type": "screenshot",
+      "format": "png",
+      "file": "disk-usage-pr-capture--system-disk-usage-desktop.png",
+      "test": "disk-usage-pr-capture.spec.ts",
+      "caption": "System Status disk usage after a successful refresh on desktop."
+    },
+    {
+      "name": "system-disk-usage-mobile",
+      "type": "screenshot",
+      "format": "png",
+      "file": "mobile-disk-usage-pr-capture--system-disk-usage-mobile.png",
+      "test": "mobile-disk-usage-pr-capture.spec.ts",
+      "caption": "System Status disk usage after a successful refresh on a phone."
+    }
+  ]
+}
