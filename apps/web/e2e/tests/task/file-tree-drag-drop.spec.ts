@@ -142,6 +142,14 @@ async function dispatchHtmlDnd(fileTree: FileTreePage, sourcePath: string, targe
 test.describe("File tree drag and drop", () => {
   test.describe.configure({ timeout: 180_000 });
 
+  test.beforeEach(async ({ backend, testPage }) => {
+    void testPage;
+    const repoDir = path.join(backend.tmpDir, "repos", "e2e-repo");
+    const git = new GitHelper(repoDir, makeGitEnv(backend.tmpDir));
+    git.exec("git checkout -f main");
+    git.exec("git clean -fd");
+  });
+
   test("drag a file into a folder moves it on disk and in the tree", async ({
     testPage,
     apiClient,

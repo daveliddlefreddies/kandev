@@ -1132,3 +1132,26 @@ race checks passed using `GOMAXPROCS=4 go test -p 2 -race -count=1
 The final fresh-build mobile recovery file passed all five first attempts with
 retries disabled. Full spec/catalog/harness checks and the 58-work-order
 coverage preflight passed. Pushed-head CI remains an external pending gate.
+
+### Continued PR #3598 CI fixture isolation (2026-10-07)
+
+A forced non-main checkout reproduced shard 1's missing `movable.ts` before
+drag-and-drop. The fixture committed its file on that checkout while task setup
+selected main. The DnD suite now checks out main and removes untracked scratch
+files before seeding, after the shared test reset has stopped previous tasks.
+All on-disk and tree movement assertions remain. The rebuilt related desktop
+suite passed nine tests with no retries:
+
+```sh
+E2E_PORT_OFFSET=0 pnpm e2e:run --project chromium tests/settings/sidebar-direct-customization.spec.ts tests/task/create-task-url-reopen-no-branches.spec.ts tests/task/file-tree-drag-drop.spec.ts -- --retries=0
+```
+
+Main `8feffe1e17` merged without conflicts. Focused race checks passed in
+workflow controller, handlers, repository, service and MCP handlers for start
+selection. Sidebar settings now reset per test using the current SQL revision;
+this does not change persistence within a scenario. Mobile sidebar validation
+passed one test, and ESLint/typecheck plus 72-work-order coverage passed.
+Hosted replacement-head validation remains pending.
+
+The full DnD spec also passed three repetitions (six tests) with `--retries=0`
+using the rebuilt artifacts. This is local evidence, not a hosted CI verdict.

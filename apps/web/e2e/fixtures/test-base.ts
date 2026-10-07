@@ -367,7 +367,14 @@ export const test = backendFixture.extend<
       await apiClient.updateWorkspace(seedData.workspaceId, { default_agent_profile_id: "" });
       await apiClient.cleanupTestProfiles([seedData.agentProfileId]);
 
+      const { settings } = await apiClient.getUserSettings();
       await apiClient.saveUserSettings({
+        // Each test owns its sidebar layout, including collapsed navigation.
+        sidebar_layout_state: {
+          workspace_id: seedData.workspaceId,
+          expected_revision:
+            settings.sidebar_layouts_by_workspace?.[seedData.workspaceId]?.revision ?? 0,
+        },
         workspace_id: seedData.workspaceId,
         workflow_filter_id: seedData.workflowId,
         keyboard_shortcuts: {},
