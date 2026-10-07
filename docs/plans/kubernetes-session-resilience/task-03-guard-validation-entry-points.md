@@ -3,7 +3,7 @@ id: "03-guard-validation-entry-points"
 title: "Route enabled heavy checks through the shared runner"
 status: done
 wave: 3
-depends_on: 
+depends_on:
   - "02-isolated-validation-runner"
 plan: "plan.md"
 requirements:

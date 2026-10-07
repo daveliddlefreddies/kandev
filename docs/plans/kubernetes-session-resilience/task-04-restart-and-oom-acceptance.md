@@ -3,7 +3,7 @@ id: "04-restart-and-oom-acceptance"
 title: "Prove restart recovery and validator OOM containment"
 status: blocked
 wave: 4
-depends_on: 
+depends_on:
   - "01-restart-safe-cleanup"
   - "02-isolated-validation-runner"
   - "03-guard-validation-entry-points"

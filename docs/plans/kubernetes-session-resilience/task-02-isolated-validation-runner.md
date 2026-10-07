@@ -3,7 +3,7 @@ id: "02-isolated-validation-runner"
 title: "Bound validation in the task Docker companion"
 status: done
 wave: 2
-depends_on: 
+depends_on:
   - "01-restart-safe-cleanup"
 plan: "plan.md"
 requirements:
