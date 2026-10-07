@@ -41,6 +41,17 @@ def job_block(workflow: str, job: str, next_job: str) -> str:
 
 
 class E2EWorkflowContractTest(unittest.TestCase):
+    def test_full_worker_acceptance_is_prepared_before_its_container_shard(self):
+        workflow = E2E_WORKFLOW.read_text()
+        job = job_block(workflow, "e2e-containers", "e2e-kubernetes-compatibility")
+        self.assertIn('shard.files.includes("tests/kubernetes/kubernetes-session-resilience.spec.ts")', job)
+        self.assertIn("steps.kubernetes.outputs.has_full_worker == 'true'", job)
+        prepare = job.index("bash .github/scripts/prepare-full-worker-acceptance.sh")
+        execute = job.index("run: bash e2e/scripts/run-planned-shard.sh")
+        self.assertLess(prepare, execute)
+        self.assertIn("kandev-full-worker-acceptance-build.log", job)
+        self.assertIn("prepare-full-worker-acceptance_test.py", LINT_WORKFLOW.read_text())
+
     def run_image_digest_resolver(
         self,
         *,

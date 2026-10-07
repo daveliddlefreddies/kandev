@@ -835,3 +835,19 @@ finite preparation failure, retained/replaced workspaces, independent daemons,
 Pod cgroup ancestry and exact cleanup including an untouched existing claim.
 The cgroup case fails if nested work escapes the Pod budget. Missing image input
 skips the suite; skips and test discovery do not count as execution acceptance.
+
+### Enabled Kubernetes validation isolation
+
+On the opt-in full-worker profile with `FULL_WORKER_CHECK_MODE=isolated`, managed
+and raw runners dispatch through the shared `scripts/worker-check` slot before
+builds or Playwright. Browser checks use one worker/shard in a bounded child
+container and keep workspace artifacts. Docker/Kind/SSH projects are rejected
+because the child has no daemon socket or agent-only runtime files. Missing
+accounting or isolation fails; do not fall back to direct commands in agent
+memory. See the [worker recipe](../../../k8s/worker-images/full/README.md#isolate-repository-validation)
+for budgets, entry-point coverage and rollout.
+
+The container CI shard that owns `kubernetes-session-resilience.spec.ts` builds
+and verifies the full worker before tests, then passes its exact local image ID
+to the fixture. Other shards do not incur that build. Build and blob reports are
+retained; a missing image or failed verification is a failure rather than a skip.
