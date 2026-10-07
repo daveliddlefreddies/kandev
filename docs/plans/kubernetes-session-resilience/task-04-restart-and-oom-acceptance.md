@@ -280,3 +280,20 @@ The five-failure JSON, blob and build log are retained privately under
 `/tmp/kandev-session-resilience-focused-artifacts-37626556444`.
 Kind was never allocated; marker-bound cleanup correctly did nothing.
 This setup failure does not accept recovery or containment criteria.
+
+Focused CI run37630229003 passed four of five real scenarios with zero retries,
+skips or flaky results: both retained failure-recovery cases, shared task-Pod
+lifecycle, and active-turn restart with one native conversation load and unique
+continuation prompts. The restart receipt records retained Pod/PVC identity and
+workspace checks. Its observed verified full-worker image was
+`sha256:d8ef967a7e2c220d87224a47b4a16a3f98bb4c75b9c98e421a4aedadf7b70cda`.
+The containment scenario failed during exact image streaming, before admission
+or child-OOM assertions. Inventory records companion exit1 and a restart after
+the60-second readiness window, with graceful daemon termination rather than OOM.
+Companion CLI probes had no DOCKER_HOST, so they checked the default socket while
+dockerd served `/run/docker/docker.sock`. Startup now explicitly uses that socket.
+A process regression with absent/wrong inherited socket was observed red before
+the correction; both cases now pass. Limits and accounting assertions are intact.
+Evidence is retained privately under
+`/tmp/kandev-session-resilience-focused-artifacts-37630229003`.
+The full five-pass gate and live containment remain unaccepted.

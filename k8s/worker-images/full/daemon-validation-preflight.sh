@@ -1,4 +1,5 @@
 # Embedded into the companion startup command by the opt-in template renderer.
+export DOCKER_HOST=unix:///run/docker/docker.sock
 receipt=/run/docker/validation-accounting.json
 rm -f "$receipt"
 probe=
