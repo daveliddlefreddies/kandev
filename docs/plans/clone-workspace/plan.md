@@ -70,7 +70,7 @@ Copy below is illustrative and must be localized. AC references:
 ```text
 UI-01 desktop | Settings > Workspaces | eligible source
 +------------------------------------------------------------------+
-| Team tools  [Active]  | Repositories | Workflows | [Clone] | >     |
+| Team tools  [Active]  | Repositories | Workflows | [copy] | >      |
 +------------------------------------------------------------------+
               +---------------------------------------------+
               | Clone workspace                         [X] |
@@ -86,9 +86,8 @@ UI-01 desktop | Settings > Workspaces | eligible source
 
 UI-02 phone | Settings > Workspaces | clone drawer
 +-----------------------------------+
-| Team tools [Active]             > |
+| Team tools [Active]   [copy]   > |
 | Repositories | Workflows          |
-| [Clone workspace]                 |
 +-----------------------------------+
 |          page behind drawer       |
 | +-------------------------------+ |

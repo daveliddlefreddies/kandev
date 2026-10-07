@@ -174,7 +174,7 @@ settings from the default workspace.
 
 ## Clone a workspace
 
-Open **Settings → Workspaces**, select **Clone** on the source workspace,
+Open **Settings → Workspaces**, select the **Clone** copy icon on the source workspace,
 enter a name, then select **Clone workspace**. The copy opens in its settings;
 your active workspace stays selected. On phones, the form opens in a bottom sheet.
 

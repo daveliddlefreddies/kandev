@@ -10,7 +10,19 @@ test("phone clone uses an inset sheet and persists the complete setup", async ({
   await testPage.setViewportSize({ width: 390, height: 844 });
   await testPage.goto("/settings/workspaces");
   const trigger = testPage.getByRole("button", { name: `Clone ${source.name}`, exact: true });
-  expect((await trigger.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await trigger.scrollIntoViewIfNeeded();
+  const triggerBounds = await trigger.boundingBox();
+  expect(triggerBounds!.height).toBeGreaterThanOrEqual(44);
+  expect(triggerBounds!.width).toBeGreaterThanOrEqual(44);
+  expect(triggerBounds!.width).toBeLessThanOrEqual(48);
+  const headingBounds = await testPage
+    .getByRole("heading", { name: source.name, exact: true })
+    .boundingBox();
+  expect(
+    Math.abs(
+      triggerBounds!.y + triggerBounds!.height / 2 - headingBounds!.y - headingBounds!.height / 2,
+    ),
+  ).toBeLessThan(2);
   await trigger.tap();
   const sheet = testPage.getByTestId("workspace-clone-sheet");
   await expect(sheet).toBeVisible();

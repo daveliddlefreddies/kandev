@@ -160,8 +160,11 @@ setup in the destination. Clone does not claim provider readiness.
 
 ## Responsive form and shared state
 
-Add a labeled Clone button beside each eligible workspace card's navigation
-content in `workspaces-page-client.tsx`. Its hit region must be above the existing
+Add a ghost copy-icon action beside each eligible workspace card's navigation
+cue in `workspaces-page-client.tsx`, with a localized tooltip and a workspace-specific
+accessible name. Use the shared icon sizing (28px desktop; at least 44px on
+phones/coarse pointers). Keep it in the phone title row and after resources on
+desktop, without a dedicated phone action row. Its hit region must be above the existing
 whole-card overlay link. Derive permissions from the projected workspace scopes
 and eligibility from `isOfficeWorkspace` plus the managed-workspace predicate;
 the backend remains authoritative.

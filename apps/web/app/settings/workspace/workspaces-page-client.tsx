@@ -9,6 +9,7 @@ import { Card, CardContent } from "@kandev/ui/card";
 import { Separator } from "@kandev/ui/separator";
 import { Input } from "@kandev/ui/input";
 import { Label } from "@kandev/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { cn } from "@kandev/ui/lib/utils";
 import Link from "@/components/routing/app-link";
 import { mapWorkspaceItem } from "@/lib/routing/route-bootstrap";
@@ -110,8 +111,8 @@ function WorkspaceListItem({
         className="absolute inset-0"
         data-testid="workspace-overview-link"
       />
-      <CardContent className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
-        <div className="flex items-center justify-between gap-3 lg:w-44 lg:shrink-0">
+      <CardContent className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 lg:grid-cols-[11rem_minmax(0,1fr)_auto_auto] lg:gap-6">
+        <div className="min-w-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h4 className="truncate text-lg font-semibold">{workspace.name}</h4>
@@ -121,22 +122,30 @@ function WorkspaceListItem({
               {settled ? t("workspaces:resourceCount", { count: total }) : "\u00a0"}
             </p>
           </div>
-          <IconChevronRight className="h-5 w-5 shrink-0 text-muted-foreground lg:hidden" />
         </div>
-        <WorkspaceSectionStats workspaceId={workspace.id} counts={counts} />
+        <WorkspaceSectionStats
+          workspaceId={workspace.id}
+          counts={counts}
+          className="col-span-3 row-start-2 min-w-0 lg:col-span-1 lg:col-start-2 lg:row-start-1"
+        />
         {canCloneWorkspace(workspace) && (
-          <Button
-            variant="outline"
-            className={cn(settingsActionClassName(), "relative z-10 w-full lg:w-auto")}
-            aria-label={t("workspaces:cloneWorkspaceNamed", { name: workspace.name })}
-            onClick={() => onClone(workspace)}
-            data-testid="clone-workspace-button"
-          >
-            <IconCopy className="mr-2 h-4 w-4" />
-            {t("workspaces:clone")}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative z-10 col-start-2 row-start-1 text-muted-foreground lg:col-start-3"
+                aria-label={t("workspaces:cloneWorkspaceNamed", { name: workspace.name })}
+                onClick={() => onClone(workspace)}
+                data-testid="clone-workspace-button"
+              >
+                <IconCopy className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("workspaces:cloneWorkspace")}</TooltipContent>
+          </Tooltip>
         )}
-        <IconChevronRight className="hidden h-5 w-5 shrink-0 text-muted-foreground lg:block" />
+        <IconChevronRight className="col-start-3 row-start-1 h-5 w-5 text-muted-foreground lg:col-start-4" />
       </CardContent>
     </Card>
   );

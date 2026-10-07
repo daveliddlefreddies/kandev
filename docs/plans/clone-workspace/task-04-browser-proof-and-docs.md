@@ -188,3 +188,22 @@ Tracked and untracked whitespace checks passed. Requirements are now `active`,
 the design `current`, and the plan `implemented`. Changes were uncommitted at
 the implementation checkpoint; the subsequent user continuation starts commit
 delivery with normal hooks.
+
+### Compact Clone action refinement
+
+The user-requested card refinement replaces the labeled button with a ghost
+copy icon and localized tooltip. Phone placement moves into the title row.
+After rebuilding the web assets, the same bounded, sequential host commands
+above passed again:
+
+- Desktop: 2/2 passed in 12.2s, log `/tmp/kandev-run.e2e.uEuTZz4V.log`.
+  Assertions cover the 28px square action, tooltip, 44px size below the 768px
+  breakpoint and 28px size at/above it, alongside real cloning and resize.
+- Phone: 2/2 passed in 16.9s, log `/tmp/kandev-run.e2e.JfM4PPSE.log`.
+  Assertions cover a square target of at least 44px aligned with the title,
+  plus the existing real clone, sheet containment, cancellation and retry flow.
+
+The focused desktop size regression failed against the old wide button before
+the implementation changed. The public procedure and durable UI previews now
+identify the compact copy icon. Screenshot publication remains a delivery step
+outside this implementation work order.

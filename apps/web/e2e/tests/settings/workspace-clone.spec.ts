@@ -12,6 +12,11 @@ test("clones full setup and query defaults without changing the active workspace
     .getByTestId("workspace-list-item")
     .filter({ has: testPage.getByRole("heading", { name: source.name, exact: true }) });
   const trigger = card.getByTestId("clone-workspace-button");
+  const triggerBounds = await trigger.boundingBox();
+  expect(triggerBounds!.width).toBeCloseTo(28, 0);
+  expect(triggerBounds!.height).toBeCloseTo(28, 0);
+  await trigger.hover();
+  await expect(testPage.getByRole("tooltip")).toContainText("Clone workspace");
   await trigger.click();
   const dialog = testPage.getByTestId("workspace-clone-dialog");
   await expect(dialog).toBeVisible();
@@ -44,6 +49,12 @@ test("cancel returns focus and resize preserves an unsaved clone name", async ({
   const source = await apiClient.createWorkspace("Resize source");
   await testPage.goto("/settings/workspaces");
   const trigger = testPage.getByRole("button", { name: `Clone ${source.name}`, exact: true });
+  for (const width of [767, 768, 1280]) {
+    await testPage.setViewportSize({ width, height: 800 });
+    const size = width < 768 ? "44px" : "28px";
+    await expect(trigger).toHaveCSS("width", size);
+    await expect(trigger).toHaveCSS("height", size);
+  }
   await trigger.click();
   await testPage.getByLabel("Workspace Name", { exact: true }).fill("Unsaved copy");
   await testPage.setViewportSize({ width: 390, height: 844 });

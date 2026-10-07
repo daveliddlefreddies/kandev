@@ -100,7 +100,7 @@ workspace or copied credentials behind.
 #### Acceptance criteria
 
 - **AC-WORKSPACES-CLONE-003.1:** Each manageable supported workspace in the
-  workspace settings list shall expose a visible, accessible Clone action
+  workspace settings list shall expose a compact, visible, accessible Clone icon action
   separate from its overview link. Read-only and unsupported workspace cards
   shall not offer an executable clone action.
 - **AC-WORKSPACES-CLONE-003.2:** The clone form shall identify its source, offer

@@ -64,7 +64,7 @@ Excerpt of [full preview](plan.md#ascii-ui-preview), covering 003.1-.5:
 
 ```text
 UI-01 desktop | workspace card and clone dialog
-| Team tools [Active] | Resources | [Clone] | > |
+| Team tools [Active] | Resources | [copy] | > |
 +--------------------------------------------+
 | Clone workspace                         X  |
 | From: Team tools                           |
@@ -74,9 +74,8 @@ UI-01 desktop | workspace card and clone dialog
 +--------------------------------------------+
 
 UI-02 phone | card action opens inset bottom drawer
-| Team tools [Active]                      > |
+| Team tools [Active]              [copy]  > |
 | Resources                                 |
-| [Clone workspace]                          |
     +-----------------------------------+
     | Clone workspace                   |
     | From: Team tools                  |
@@ -152,3 +151,15 @@ escape JSX-only scanning.
 The final localized form summary explicitly excludes repository secrets and
 keeps personal GitHub sign-in separate. All seven language catalogs and pseudo
 were regenerated/checked; the phone browser test verifies this summary.
+
+User-requested visual refinement: replace the prominent labeled card button
+with a ghost copy icon beside navigation. Use the shared square icon size
+(28px desktop; at least 44px on phones/coarse pointers), a localized tooltip
+and workspace-specific accessible name. Phone placement stays in the title
+row, without a dedicated action row. Existing responsive clone flow tests
+now assert desktop dimensions and phone square-target/header alignment.
+
+The compact icon revision passed scoped ESLint and TypeScript checks. The first
+TypeScript attempt exhausted its 2 GB heap; a sequential retry passed with a
+3 GB heap under a 4 GB process cap. No application code changed for the retry.
+Task 04 records the fresh desktop/phone browser evidence.
