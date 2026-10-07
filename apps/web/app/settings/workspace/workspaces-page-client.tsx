@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { settingsActionClassName } from "@/components/settings/settings-control";
-import { IconChevronRight, IconPlus } from "@tabler/icons-react";
+import { IconChevronRight, IconPlus, IconCopy } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { Card, CardContent } from "@kandev/ui/card";
 import { Separator } from "@kandev/ui/separator";
@@ -27,6 +27,9 @@ import {
 } from "@/components/settings/workspaces/workspace-settings-shell";
 import { orderWorkspacesForDisplay } from "@/lib/settings/workspace-display-order";
 import type { WorkspaceState } from "@/lib/state/slices";
+
+import { canCloneWorkspace, useWorkspaceClone } from "./use-workspace-clone";
+import { WorkspaceCloneDialog } from "./workspace-clone-dialog";
 
 type Workspace = WorkspaceState["items"][number];
 
@@ -80,7 +83,13 @@ function AddWorkspaceForm({
   );
 }
 
-function WorkspaceListItem({ workspace }: { workspace: Workspace }) {
+function WorkspaceListItem({
+  workspace,
+  onClone,
+}: {
+  workspace: Workspace;
+  onClone: (workspace: Workspace) => void;
+}) {
   const { t } = useTranslation();
   const activeId = useAppStore((s) => s.workspaces.activeId);
   const isActive = workspace.id === activeId;
@@ -115,6 +124,18 @@ function WorkspaceListItem({ workspace }: { workspace: Workspace }) {
           <IconChevronRight className="h-5 w-5 shrink-0 text-muted-foreground lg:hidden" />
         </div>
         <WorkspaceSectionStats workspaceId={workspace.id} counts={counts} />
+        {canCloneWorkspace(workspace) && (
+          <Button
+            variant="outline"
+            className={cn(settingsActionClassName(), "relative z-10 w-full lg:w-auto")}
+            aria-label={t("workspaces:cloneWorkspaceNamed", { name: workspace.name })}
+            onClick={() => onClone(workspace)}
+            data-testid="clone-workspace-button"
+          >
+            <IconCopy className="mr-2 h-4 w-4" />
+            {t("workspaces:clone")}
+          </Button>
+        )}
         <IconChevronRight className="hidden h-5 w-5 shrink-0 text-muted-foreground lg:block" />
       </CardContent>
     </Card>
@@ -131,6 +152,7 @@ export function WorkspacesPageClient() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const orderedItems = orderWorkspacesForDisplay(items, activeWorkspaceId);
+  const clone = useWorkspaceClone(t);
 
   const handleAddWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,7 +213,7 @@ export function WorkspacesPageClient() {
           )}
 
           {orderedItems.map((workspace: Workspace) => (
-            <WorkspaceListItem key={workspace.id} workspace={workspace} />
+            <WorkspaceListItem key={workspace.id} workspace={workspace} onClone={clone.open} />
           ))}
 
           {orderedItems.length === 0 && (
@@ -205,6 +227,7 @@ export function WorkspacesPageClient() {
           )}
         </div>
       </div>
+      <WorkspaceCloneDialog flow={clone} />
     </div>
   );
 }
