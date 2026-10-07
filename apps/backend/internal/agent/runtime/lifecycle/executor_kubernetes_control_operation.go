@@ -27,10 +27,11 @@ func (r *KubernetesExecutor) withSharedKubernetesControlAuth(ctx context.Context
 	if nonce == "" && r.secretStore != nil {
 		id := getMetadataString(req.Metadata, MetadataKeyBootstrapNonceSecret)
 		if id != "" {
-			nonce, err = r.secretStore.Reveal(ctx, id)
-		}
-		if err != nil && nonce == "" {
-			return "", err
+			var revealErr error
+			nonce, revealErr = r.secretStore.Reveal(ctx, id)
+			if revealErr != nil && nonce == "" {
+				return "", revealErr
+			}
 		}
 	}
 	if nonce == "" {

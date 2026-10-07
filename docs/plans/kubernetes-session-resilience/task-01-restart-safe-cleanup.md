@@ -103,3 +103,12 @@ Commands passed:
 and the same command with `-race` and `-timeout=240s`, from apps/backend.
 Catalog validation, all specification lint and diff whitespace passed.
 Native continuation/workspace acceptance remains owned by 04.
+
+PR review follow-up: a missing bootstrap secret reference left the original
+401 in the lookup error variable. The new missing-reference cleanup regression
+was observed red (raw401 instead of nonce unavailable); lookup errors now have
+a separate variable. Clearing the canonical bootstrap reference and instance
+metadata must retain the exact attachment, consume no handshake, and delete no
+Pod/PVC. The targeted trimpath/race command above passed after the fix:
+agentctl1.122s and lifecycle8.377s, including the ninth cleanup regression.
+This changes no resume-error or UI behavior.

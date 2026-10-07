@@ -119,6 +119,22 @@ func TestKubernetesSharedCleanupMissingNonceRetainsRecovery(t *testing.T) {
 	require.Zero(t, handshakes)
 }
 
+func TestKubernetesSharedCleanupMissingNonceReferenceRetainsRecovery(t *testing.T) {
+	f := newTaskPodFixture(t)
+	a := f.launch(t, 1)
+	original := f.runtime.currentKubernetesSession(a.InstanceID)
+	delete(a.Metadata, MetadataKeyBootstrapNonceSecret)
+	_, err := f.database.Exec(`UPDATE task_environment_kubernetes SET bootstrap_secret_id = '' WHERE environment_id = 'environment-1'`)
+	require.NoError(t, err)
+	f.control.reboot()
+	require.ErrorContains(t, f.runtime.StopInstance(context.Background(), a, true), "bootstrap nonce is unavailable")
+	require.Same(t, original, f.runtime.currentKubernetesSession(a.InstanceID))
+	_, _, handshakes := f.control.snapshot()
+	require.Zero(t, handshakes)
+	require.Empty(t, f.resources.deletedPods)
+	require.Empty(t, f.resources.deletedPVCs)
+}
+
 type unavailableRecoverySecretStore struct{ *failingUpdateSecretStore }
 
 func (s *unavailableRecoverySecretStore) Create(context.Context, *secrets.SecretWithValue) error {
