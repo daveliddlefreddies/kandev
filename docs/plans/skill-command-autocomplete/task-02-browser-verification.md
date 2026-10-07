@@ -150,3 +150,31 @@ Three first attempts passed with
 --project chromium tests/chat/slash-command-composer.spec.ts -- --grep
 'invalidates a previous execution' --retries=0 --repeat-each=3` from the root.
 Fresh hosted verification remains pending.
+
+### PR #3598 CI remediation (2026-10-07)
+
+Hosted shard 2 exposed the live-provider test seeding commands before the
+provider's initial command list arrived. The test now captures the matching
+session's initial command notification before seeding its plan command, as the
+adjacent startup test already does. Provider updates and all open-menu state
+assertions remain. The repaired scenario passed three repetitions without
+retries. No production or mobile behavior changed.
+
+Validation from `apps/web`:
+
+```sh
+E2E_PORT_OFFSET=0 pnpm e2e:run --project chromium tests/task/create-task-branch-policy.spec.ts tests/chat/slash-command-composer.spec.ts -- --grep 'selects a policy, enables fresh branch mode|keeps an open plan menu current' --retries=0 --repeat-each=3
+```
+
+Result: six passed after rebuilding the merged-main artifacts. Focused ESLint
+and `pnpm run typecheck` also passed.
+
+The complete desktop spec command also passed without retries:
+
+```sh
+E2E_PORT_OFFSET=0 pnpm e2e:run --no-build --project chromium tests/task/create-task-branch-policy.spec.ts tests/chat/slash-command-composer.spec.ts -- --retries=0
+```
+
+Result: ten passed. Repository catalog validation, full specification lint, and
+PR documentation coverage passed (71 work orders). Hosted CI for the next head
+remains pending; these are local receipts.
