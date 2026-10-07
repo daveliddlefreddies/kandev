@@ -161,3 +161,10 @@ focused check failures; local Kind retries are stopped. The user subsequently se
 commit, push and draft PR publication despite the local live gate blocker.
 The draft PR will provide a clean runner for acceptance. Image publication,
 profile rollout and merge remain outside this authorization.
+
+A draft-only focused acceptance job is now prepared to avoid repeated
+build/manifest/shard runner allocations for the live gate. It performs the same
+bounded image verification and runs all five new/retained Kubernetes scenarios
+with zero retries, rejecting skips or missing executed results. Ordinary ready
+PR checks retain their existing paths. The focused job remains unexecuted at
+this checkpoint; no specification or work-order live status is promoted.

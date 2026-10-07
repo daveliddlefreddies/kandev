@@ -67,7 +67,9 @@ Future output: `apps/web/e2e/tests/kubernetes/kubernetes-session-resilience.spec
 `apps/web/e2e/helpers/kubernetes-validation.ts`,
 `apps/web/e2e/fixtures/kubernetes-storage-readiness.ts` and
 `apps/web/e2e/scripts/kubernetes-storage-readiness.test.ts`,
-`.github/scripts/prepare-full-worker-acceptance.sh` and its Python process tests.
+`.github/scripts/prepare-full-worker-acceptance.sh` and its Python process tests,
+`.github/workflows/kubernetes-session-acceptance.yml` and
+`.github/scripts/verify-kubernetes-session-acceptance.cjs`.
 Avoid oversized specs by keeping new fault scenarios in that file.
 
 ## Scenario controls
@@ -240,3 +242,17 @@ with the CI helper/workflow paths included. Publication was not authorized at th
 selected the CI draft PR option, explicitly authorizing commit, push and a
 draft PR to obtain clean-runner evidence despite the blocked local live gate.
 No production image publication, profile rollout or merge is authorized.
+
+Clean-runner delivery follow-up: the normal E2E workflow spent more than half an
+hour in dependent runner queues before any acceptance build. A draft-only
+Kubernetes Session Acceptance workflow now keeps tool setup, bounded image
+build/verification, managed application builds and the five retained/new
+scenarios in one disposable job. Ready PRs continue to use ordinary containers
+CI; this workflow also supports later explicit manual diagnostics. Its reporter
+guard requires five actually passed results, one attempt each, zero skips, zero
+flakiness and no setup errors. Exact marker-bound Kind cleanup and build/blob/JSON
+evidence run even on failure. Four new workflow/report contract cases were
+observed red before these artifacts existed, then passed; the expanded workflow
+suite passed21 cases and the preparation suite passed4. All27 workflows are
+SHA-pinned. This is source verification only; live acceptance remains blocked
+until the focused job executes its actual fault assertions.

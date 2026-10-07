@@ -352,6 +352,14 @@ pnpm exec tsx e2e/scripts/retry-summary.ts --input <blob-dir> --output /tmp/retr
 pnpm exec tsx e2e/scripts/flake-report.ts --summary /tmp/retry-summary.json
 ```
 
+Draft Kubernetes resilience PRs also have a single-job `Kubernetes Session Acceptance`
+workflow. It builds the bounded full worker and managed application artifacts,
+runs the two restart/OOM scenarios plus three retained recovery/task-Pod controls
+with zero retries, and requires five executed passes without skips or setup
+errors. Build logs, blob diagnostics and the JSON report remain available on
+failure. Ready PRs keep ordinary containers CI; after this workflow lands it can
+also be dispatched explicitly for focused diagnostics.
+
 ### `pnpm e2e:run` — the managed runner (build + run + teardown)
 
 `e2e/scripts/run-e2e.sh` (aliased as `pnpm e2e:run`) handles the build, the run, and cleanup so you don't have to assemble the steps by hand. It **auto-selects docker vs host**, runs a resource-bounded number of shards concurrently, enforces one Playwright worker per shard, strict WS accounting by default (`KANDEV_E2E_WS_ASSERT=1`, matching CI), and never leaves root-owned artifacts behind.
