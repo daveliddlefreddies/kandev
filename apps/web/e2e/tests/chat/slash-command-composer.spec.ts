@@ -260,11 +260,19 @@ test.describe("Slash command composer", () => {
     apiClient,
     seedData,
   }) => {
+    const availableCommands = attachAvailableCommandsCapture(testPage);
     const notifications = await routeGatewayNotifications(testPage);
     const task = await createReadyTask(apiClient, seedData, "Startup Plan Mode Snapshot");
     if (!task.session_id) throw new Error("createTaskWithAgent did not return a session_id");
 
     const session = await openTaskChat(testPage, task.id);
+    await expect
+      .poll(() =>
+        availableCommands.frames.some(
+          (frame) => frame.sessionId === task.session_id && frame.count > 0,
+        ),
+      )
+      .toBe(true);
     await seedAvailableCommands(testPage, task.session_id, [PLAN_COMMAND]);
     const previousExecutionId = await getSessionAgentExecutionId(testPage, task.session_id);
     if (!previousExecutionId) throw new Error("The live session has no agent execution ID");

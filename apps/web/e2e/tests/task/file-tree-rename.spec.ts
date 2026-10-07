@@ -167,7 +167,10 @@ test.describe("File tree inline rename", () => {
     const git = new GitHelper(repoDir, makeGitEnv(backend.tmpDir));
     git.exec("git checkout main");
     git.createFile("blur-original.ts", "blur");
-    git.createFile("other.ts", "other");
+    git.createFile("blur-other.ts", "other");
+    for (let index = 0; index < 60; index++) {
+      git.createFile(`middle-${String(index).padStart(3, "0")}.ts`, "filler");
+    }
     git.stageAll();
     git.commit("seed blur file");
     git.pushMainWithRetry();
@@ -188,7 +191,10 @@ test.describe("File tree inline rename", () => {
     await input.fill("blur-final.ts");
     // Click another file to blur the input. The other node also belongs to
     // the tree, so we don't lose tree-container focus state.
-    await (await session.fileTree.waitForFileTreeNode("other.ts")).click();
+    await expect(input).toBeFocused();
+    const companion = session.fileTreeNode("blur-other.ts");
+    await expect(companion).toBeVisible();
+    await companion.click();
 
     await session.fileTree.waitForFileTreeNode("blur-final.ts");
     await expect(session.fileTreeNode("blur-original.ts")).toHaveCount(0);

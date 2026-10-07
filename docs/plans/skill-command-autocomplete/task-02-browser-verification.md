@@ -134,3 +134,19 @@ Task 01. Use `/e2e`, `/mobile-parity`, and `/docs-maintainer` during implementat
 - After review remediation, the latest complete managed Chromium composer suite passed 8 tests and the mobile composer suite passed 2 tests. The open-menu test sends a partial provider update without `config_options_settled` and confirms plan mode remains Active; startup tests verify immediate invalidation and fresh-snapshot restoration; forged command-shaped clipboard HTML remains `/plan` plain text through explicit send.
 - Documented command selection, chips, and argument hints in `docs/public/tasks-and-workflows.md`.
 - Public documentation tests passed (62 tests) and the validator checked 47 published pages. Specification catalog validation, all specification files, and the 36 specification-linter tests passed.
+
+
+### CI startup fixture follow-up (2026-10-07)
+
+The startup mode-state case now observes the real session's initial available
+commands before installing its controlled plan command. Chat idle does not
+prove that the asynchronous provider command frame arrived; that frame can
+otherwise replace the seeded menu. The hosted case failed on its first attempt
+at the missing `/plan` option. All startup invalidation, new-execution identity
+and fresh mode-snapshot assertions remain.
+
+Three first attempts passed with
+`E2E_PORT_OFFSET=0 pnpm --dir apps/web e2e:run --host --no-build --shards 1
+--project chromium tests/chat/slash-command-composer.spec.ts -- --grep
+'invalidates a previous execution' --retries=0 --repeat-each=3` from the root.
+Fresh hosted verification remains pending.

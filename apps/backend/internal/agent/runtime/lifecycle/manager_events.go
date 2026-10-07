@@ -975,6 +975,13 @@ func (m *Manager) handleStreamDisconnectWithAttempt(
 			if current != execution || current.promptGeneration != promptGeneration {
 				return
 			}
+			// A delayed transport close cannot replace a settled turn outcome.
+			// Unsettled durable submissions still require reconciliation.
+			if current.Status == v1.AgentStatusReady &&
+				current.promptCompletionGeneration == promptGeneration &&
+				current.promptSettlementGeneration == 0 && uncertainSubmissionID == "" {
+				return
+			}
 			if current.cancelEscalatedPromptGeneration.Load() == promptGeneration {
 				cancelEscalation = true
 				claimed = true
