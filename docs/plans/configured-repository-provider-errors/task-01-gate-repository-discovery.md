@@ -127,3 +127,31 @@ Reproduction command: `pnpm --dir apps/web e2e:run --host --no-build --shards 1
 
 Collapsed-navigation regression: all three repeat runs passed with retries
 disabled. Focused ESLint passed with zero warnings.
+
+### PR #3598 optional disclosure remediation (2026-10-07)
+
+Hosted shard 9 timed out waiting for `sidebar-navigation-expand` in picker
+scenario 1. The sidebar only renders that disclosure when navigation is clipped
+or a saved size is expandable. The failure artifact shows New Task already
+present, so the earlier opener's unconditional attribute read was invalid.
+The shared opener now uses the always-present divider's `End` keyboard action
+before clicking New Task. Provider, repository, and dialog assertions remain.
+Production UI and timeout/retry settings are unchanged. Rebuilt browser checks
+and fresh hosted validation are pending.
+
+After merging main's profile-enabled omission fix, the rebuilt combined desktop
+command passed all 17 cases on their first attempts:
+`E2E_PORT_OFFSET=0 pnpm e2e:run tests/task/create-task-remote-repo.spec.ts
+ tests/workflow/workflow-move-preview.spec.ts
+ tests/chat/queue-admission-reliability.spec.ts --project=chromium --retries=0`
+from `apps/web`. Profile-enabled race checks passed through backendapp,
+settings controller/store/handlers, MCP, and lifecycle. Focused ESLint, web
+typecheck, catalog/spec lint, and 74-work-order coverage passed.
+
+The matching mobile command then passed all 10 cases on their first attempts:
+`E2E_PORT_OFFSET=0 pnpm e2e:run --no-build
+ tests/task/mobile-create-task-remote-repo.spec.ts
+ tests/workflow/mobile-workflow-move-preview.spec.ts
+ tests/chat/mobile-queue-admission-reliability.spec.ts
+ --project=mobile-chrome --retries=0` from `apps/web`.
+Fresh hosted CI remains pending; these local passes do not establish its result.

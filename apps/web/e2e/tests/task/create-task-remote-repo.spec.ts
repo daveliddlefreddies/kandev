@@ -43,11 +43,9 @@ async function fetchRepoById(apiClient: ApiClient, repoId: string): Promise<Repo
 
 async function openCreateDialog(testPage: Page, kanban: KanbanPage): Promise<void> {
   await kanban.goto();
-  const expand = testPage.getByTestId("sidebar-navigation-expand");
-  if ((await expand.getAttribute("aria-expanded")) === "false") {
-    await expand.click();
-    await expect(expand).toHaveAttribute("aria-expanded", "true");
-  }
+  const divider = testPage.getByTestId("sidebar-navigation-divider");
+  await divider.focus();
+  await divider.press("End");
   await kanban.createTaskButton.first().click();
   await expect(testPage.getByTestId("create-task-dialog")).toBeVisible();
 }
