@@ -1097,3 +1097,30 @@ The earlier isolated cleanup startup failure remains unconfirmed; this result
 does not claim a production startup fix. Catalog/full spec lint and coverage
 preflight passed: 57 work orders against merged main, 65 against the recorded
 PR base, with zero coverage errors.
+
+
+Current-main conflict remediation (2026-10-07): canonical source diagnostic evidence
+is separate from marker-free persisted-message notifications; the focused
+regression failed before repair and passed afterward. The merge reuses the
+shared semantic JSON metadata CAS and preserves main's initial-submission and
+cancellation ownership contracts. `GOMAXPROCS=4 go test -p 2 -count=1
+-timeout=10m ./internal/agent/runtime/lifecycle
+./internal/task/repository/sqlite ./internal/orchestrator/...` passed, as did
+`GOMAXPROCS=4 go test -p 2 -count=1 -timeout=15m
+./internal/agentctl/server/process`. Focused canonical/diagnostic and executor
+race checks passed. Full web typecheck/lint/i18n, diff-scoped Go lint,
+catalog/spec and harness checks passed.
+
+The accepted lazy-resume browser fixture used an uninterruptible `/slow 8s`
+command and could exceed the cancellation deadline. It now uses the existing
+cancellation-aware inline delay and requires agent-authored acceptance output
+and the persisted boot receipt. Two helper regressions failed before the
+agent-author filter and passed after it:
+`pnpm --dir apps/web exec vitest run
+e2e/helpers/session-resume-prompt-queue.test.ts`. The corrected mobile case
+passed three first attempts with `--repeat-each=3 --retries=0`; the earlier
+mobile batch with a retry remains failed evidence. Desktop merge-fixture
+validation passed all 19 cases with retries disabled, using the managed host
+runner with one worker. Pushed-head hosted CI remains pending at this checkpoint.
+Manual native Windows/macOS and targeted durable PostgreSQL/live-harness
+release gates remain open.

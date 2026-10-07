@@ -72,16 +72,8 @@ func (c *streamCoalescer) add(chunk coalescedStreamChunk) {
 	}
 	c.received++
 
-	// A diagnostic-marker change is treated as a correlation-key change, just
-	// like a messageID or eventType change: merging a marked chunk's content
-	// into an unmarked pending segment (or vice versa) would silently erase
-	// the marker for the merged text. A promptGeneration change gets the same
-	// treatment: merging chunks from two different prompt attempts would stamp
-	// the merged text with only one attempt's generation, breaking downstream
-	// recovery-evidence correlation for the other attempt's content. An
-	// attemptID change is likewise a correlation-key change: it identifies the
-	// immutable recovery attempt that owns the callback, so merging across an
-	// attemptID boundary would relabel one attempt's content with another's.
+	// Prompt-generation and attempt-ID changes are correlation-key changes.
+	// Combining across either boundary would relabel content.
 	sameAsLast := c.lastEventType == chunk.eventType && c.lastMessageID == chunk.messageID &&
 		c.lastAttemptID == chunk.attemptID &&
 		c.lastDiagnostic == chunk.diagnostic && c.lastPromptGeneration == chunk.promptGeneration &&
@@ -108,7 +100,6 @@ func (c *streamCoalescer) add(chunk coalescedStreamChunk) {
 	c.lastEventType = chunk.eventType
 	c.lastMessageID = chunk.messageID
 	c.lastAttemptID = chunk.attemptID
-	c.lastDiagnostic = chunk.diagnostic
 	c.lastPromptGeneration = chunk.promptGeneration
 	c.lastCanonicalProjection = chunk.canonicalProjection
 	c.mu.Unlock()

@@ -293,8 +293,7 @@ type Manager struct {
 	// attachedCount is the live count of backend event-stream connections
 	// (see attachment.go). Zero value correctly starts an instance detached.
 	attachedCount atomic.Int32
-	// Terminal producers must access the recorder while Stop holds mu and
-	// waits for those producers to exit, so its wiring has a separate lock.
+	// turnOutcomeMu guards recorder wiring independently of lifecycle transitions.
 	turnOutcomeMu         sync.RWMutex
 	turnOutcomeRecorder   TurnOutcomeRecorder
 	turnOutcomeInstanceID string

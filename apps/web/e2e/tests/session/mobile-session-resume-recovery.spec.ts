@@ -54,7 +54,7 @@ async function seedSessionWithProfile(
 const CRASH_RECOVERY_TIMEOUT = 170_000;
 
 test.describe("mobile: delayed resume cancellation", () => {
-  test.describe.configure({ retries: 1 });
+  test.describe.configure({ retries: 0 });
 
   test.describe("unaccepted startup cancellation", () => {
     test.describe.configure({ retries: 0 });
@@ -67,13 +67,9 @@ test.describe("mobile: delayed resume cancellation", () => {
     }) => {
       test.setTimeout(180_000);
 
-      const fixture = await seedDelayedResumeFixture(
-        testPage,
-        apiClient,
-        seedData,
-        backend,
-        "Mobile session cancel and retry recovery",
-      );
+      const fixture = await seedDelayedResumeFixture(testPage, apiClient, seedData, backend, {
+        title: "Mobile session cancel and retry recovery",
+      });
 
       try {
         await expect(fixture.session.cancelAgentButton()).toBeVisible({ timeout: 15_000 });
@@ -83,7 +79,7 @@ test.describe("mobile: delayed resume cancellation", () => {
           sessionId: fixture.identity.sessionId,
           expectedState: "WAITING_FOR_INPUT",
           message: "Waiting for mobile delayed resume cancellation",
-          timeout: 60_000,
+          timeout: 30_000,
         });
         // Retry the same saved conversation through the touch composer. The old
         // delayed callback must not publish a second response or consume this
@@ -169,10 +165,20 @@ test.describe("mobile: delayed resume cancellation", () => {
 
       // Provider output proves that the resumed prompt crossed acceptance
       // before the touch cancellation is sent.
-      await session.sendMessageViaButton("/slow 8s");
-      await expect(session.chat.getByText("Running slow response", { exact: false })).toBeVisible({
+      await session.sendMessageViaButton(
+        'e2e:message("Running slow response (8s total)...")\ne2e:delay(8000)',
+      );
+      await expect(
+        session.chat.getByText("Running slow response (8s total)...", { exact: true }),
+      ).toBeVisible({
         timeout: 30_000,
       });
+      await expect
+        .poll(() => countResumeBootMessages(apiClient, task.session_id!), {
+          message: "Waiting for the resumed runtime boot receipt before cancellation",
+          timeout: 30_000,
+        })
+        .toBe(resumeBootsBeforeMessage + 1);
       const initialRuntimeIdentity = await readSessionRuntimeIdentity(
         apiClient,
         task.id,
@@ -200,7 +206,9 @@ test.describe("mobile: delayed resume cancellation", () => {
         "Running slow response",
       );
       expect(slowResponseMessageIdsBeforeSecond.size).toBeGreaterThan(0);
-      await session.sendMessageViaButton("/slow 8s");
+      await session.sendMessageViaButton(
+        'e2e:message("Running slow response (8s total)...")\ne2e:delay(8000)',
+      );
       await waitForNewSessionMessage(
         apiClient,
         task.session_id,

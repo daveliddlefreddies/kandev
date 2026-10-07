@@ -264,10 +264,11 @@ They require tests for the current startup-recovery path, not only tests for a n
 
 The journal commits normalized payloads with assigned sequences before publication.
 Events retain applicable submission identity and stable tool, message, permission, and terminal IDs.
-Canonical notifications retain prompt generation and provider-diagnostic provenance.
+Canonical notifications retain generation and persisted message identity.
+Source events retain diagnostic provenance; visible notifications remain marker-free.
 
 The backend reconnects using its highest contiguous projected sequence.
-This implementation acknowledges after projection, so acknowledged pruning cannot remove work still needed by the projector.
+Acknowledgment follows projection, so pruning preserves unprojected records.
 Agentctl replays later records, then joins the same stream at a captured high-water mark.
 A writer cannot create a gap between replay and live delivery.
 Duplicate delivery is allowed. Sequence gaps are not.
@@ -276,7 +277,7 @@ Acknowledgment cannot exceed the stream high-water mark.
 It cannot acknowledge gaps or another owner.
 A cursor before retained history returns `cursor_expired`.
 An unknown stream returns `stream_unknown`.
-The backend reconciles these outcomes rather than treating them as an empty successful replay.
+The backend reconciles these errors instead of accepting an empty replay.
 
 Native ACP load can replay historical notifications.
 The adapter's native-history suppression remains active.

@@ -31,18 +31,32 @@ func TestCanonicalStreamingEventsRetainPromptEvidence(t *testing.T) {
 			mgr.handleAgentEvent(execution, event)
 			mgr.flushStreamCoalescer(execution)
 			published := eventBus.getStreamEvents()
-			if len(published) != 1 {
-				t.Fatalf("stream events = %d, want one projected chunk", len(published))
+			if len(published) != 2 {
+				t.Fatalf("stream events = %d, want original evidence and one projected chunk", len(published))
 			}
-			data := published[0].Data
+			evidence := published[0].Data
+			if evidence == nil || evidence.Type != event.Type || evidence.MessageID != "" || evidence.CanonicalProjection {
+				t.Fatalf("original evidence = %+v, want unprojected source identity", evidence)
+			}
+			if evidence.PromptGeneration != generation || evidence.ProviderDiagnosticCandidate != event.ProviderDiagnosticCandidate {
+				t.Fatalf("original evidence lost generation or diagnostic provenance: %+v", evidence)
+			}
+			wantText := event.Text
+			if event.Type == "reasoning" {
+				wantText = event.ReasoningText
+			}
+			if evidence.Text != wantText {
+				t.Fatalf("original evidence text = %q, want %q", evidence.Text, wantText)
+			}
+			data := published[1].Data
 			if data == nil || !data.CanonicalProjection || data.MessageID != event.CanonicalMessageID {
 				t.Fatalf("projected chunk = %+v, want canonical message identity", data)
 			}
 			if data.PromptGeneration != generation {
 				t.Errorf("prompt generation = %d, want %d", data.PromptGeneration, generation)
 			}
-			if data.ProviderDiagnosticCandidate != event.ProviderDiagnosticCandidate {
-				t.Errorf("diagnostic candidate = %t, want %t", data.ProviderDiagnosticCandidate, event.ProviderDiagnosticCandidate)
+			if data.ProviderDiagnosticCandidate {
+				t.Error("visible canonical projection retained diagnostic evidence marker")
 			}
 		})
 	}

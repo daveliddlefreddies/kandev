@@ -224,7 +224,10 @@ type LaunchSessionRequest struct {
 	InitialCreatePrompt bool `json:"-"`
 	// InitialPromptPreview is supplied only by task creation after attachment claim.
 	InitialPromptPreview *models.InitialPromptPreview `json:"-"`
-	Attachments          []v1.MessageAttachment       `json:"attachments,omitempty"`
+	// InitialPromptSubmission is persisted during task-session preparation and
+	// is only set by the server for the explicit fresh-start replay path.
+	InitialPromptSubmission *models.InitialPromptSubmission `json:"-"`
+	Attachments             []v1.MessageAttachment          `json:"attachments,omitempty"`
 	// SpawnOrigin identifies the agent session that requested this launch via
 	// spawn_session_kandev, so the new session's first turn can carry spawner
 	// attribution and reply instructions. Like DeferredStart it is kept off the
@@ -758,6 +761,7 @@ func (s *Service) claimLaunchAttachments(ctx context.Context, req *LaunchSession
 // later start would be rejected against the now-running session.
 func (s *Service) launchPrepare(ctx context.Context, req *LaunchSessionRequest) (*LaunchSessionResponse, error) {
 	prepareCtx := withInitialPromptPreview(ctx, req.InitialPromptPreview)
+	prepareCtx = withInitialPromptSubmission(prepareCtx, req.InitialPromptSubmission)
 	if s.shouldUpgradePassthroughPrepare(ctx, req) {
 		return s.launchStart(prepareCtx, req)
 	}
@@ -893,6 +897,16 @@ func (s *Service) launchStartCreated(ctx context.Context, req *LaunchSessionRequ
 	autoStart := req.AutoStart || req.ActivationSource == LaunchActivationSourceSessionOpen
 	parkingStamp := s.captureWorkflowParkingStamp(ctx, req.SessionID)
 	options := startCreatedSessionOptions{}
+	if !req.NoInitialPrompt {
+		beforeAdmission, accepted, callbackErr := s.initialSubmissionDispatchCallbacks(
+			ctx, req.TaskID, req.SessionID, req.Prompt, req.PlanMode, req.Attachments,
+		)
+		if callbackErr != nil {
+			return nil, callbackErr
+		}
+		options.beforeProviderAdmission = beforeAdmission
+		options.onInitialPromptAccepted = accepted
+	}
 	if req.NoInitialPrompt {
 		options.skipTaskDescriptionFallback = true
 		options.promptAlreadyComposed = true
@@ -941,7 +955,7 @@ func (s *Service) launchResume(ctx context.Context, req *LaunchSessionRequest) (
 	if req.ActivationSource == LaunchActivationSourceSessionOpen {
 		resumeCtx = withSessionOpenRecoveryContext(ctx)
 	}
-	execution, err := s.ResumeTaskSessionWithOptions(resumeCtx, req.TaskID, req.SessionID, executor.ResumeOptions{
+	resumeOptions := executor.ResumeOptions{
 		AllowBranchReplacement:           req.AllowBranchReplacement,
 		RepairWorkspaceInventory:         req.RepairWorkspaceInventory,
 		WorkspaceInventoryIdempotencyKey: req.WorkspaceInventoryIdempotencyKey,
@@ -954,8 +968,33 @@ func (s *Service) launchResume(ctx context.Context, req *LaunchSessionRequest) (
 		DeferInitialPrompt:               req.DeferRecoveryResolution,
 		RecoveryAction:                   req.RecoveryAction,
 		StartAgentSynchronously:          req.DeferRecoveryResolution,
-	})
+	}
+	var execution *executor.TaskExecution
+	var err error
+	if req.InitialPromptSubmission != nil {
+		resumeOptions.NoInitialPrompt = true
+		resumeOptions.HoldForInitialPrompt = true
+		resumeOptions.InitialPromptSubmission = req.InitialPromptSubmission
+		execution, err = s.resumeTaskSessionWithContinuation(
+			resumeCtx, req.TaskID, req.SessionID, resumeOptions,
+			func(promptCtx context.Context, attempt *resumeAttempt, _ *executor.TaskExecution) error {
+				return s.replayInitialPromptSubmission(
+					promptCtx, req.TaskID, req.SessionID, req.InitialPromptSubmission, attempt,
+				)
+			},
+		)
+	} else {
+		execution, err = s.ResumeTaskSessionWithOptions(resumeCtx, req.TaskID, req.SessionID, resumeOptions)
+	}
 	if err != nil {
+		if req.InitialPromptSubmission != nil {
+			// The owned continuation has released its lifecycle lock and initial
+			// prompt hold. Give queued work a fresh admission attempt after replay
+			// reaches a terminal failure.
+			drainCtx, cancelDrain := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+			s.drainQueuedMessageForPromptableSession(drainCtx, req.SessionID)
+			cancelDrain()
+		}
 		var blocked *sessionOpenRecoveryBlockedError
 		if errors.As(err, &blocked) {
 			return s.sessionOpenRecoveryWaitingResponse(ctx, req, blocked.reason), nil
@@ -1330,6 +1369,13 @@ func (s *Service) RecoverSessionWithOptions(
 		defer func() { _ = recoveryAdmission.Release(context.WithoutCancel(ctx)) }()
 		launchCtx = worktree.WithRecoveryAdmission(launchCtx, recoveryAdmission)
 	}
+	var initialSubmission *models.InitialPromptSubmission
+	if action == recoveryActionFreshStart {
+		initialSubmission, err = s.initialSubmissionForFreshStart(launchCtx, taskID, session)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	if err := s.applySessionRecoveryAction(ctx, sessionID, action); err != nil {
 		if checkpoint != nil {
@@ -1353,6 +1399,7 @@ func (s *Service) RecoverSessionWithOptions(
 		ContinuationPrompt:               resumeOptions.ContinuationPrompt,
 		RecoveryAction:                   action,
 		DeferRecoveryResolution:          checkpoint != nil,
+		InitialPromptSubmission:          initialSubmission,
 	})
 	if err != nil {
 		return s.handleContinuationLaunchError(ctx, checkpoint, err)

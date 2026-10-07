@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	agentruntime "github.com/kandev/kandev/internal/agent/runtime"
@@ -515,6 +516,30 @@ func (s *Service) persistInitialPromptPreviewFromContext(ctx context.Context, ta
 	return nil
 }
 
+type initialPromptSubmissionContextKey struct{}
+
+func withInitialPromptSubmission(ctx context.Context, submission *models.InitialPromptSubmission) context.Context {
+	if submission == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, initialPromptSubmissionContextKey{}, submission)
+}
+
+func (s *Service) persistInitialPromptSubmissionFromContext(ctx context.Context, taskID, sessionID string) error {
+	submission, ok := ctx.Value(initialPromptSubmissionContextKey{}).(*models.InitialPromptSubmission)
+	if !ok || submission == nil {
+		return nil
+	}
+	if err := submission.Validate(); err != nil {
+		return s.handleSessionLaunchFailure(ctx, taskID, sessionID, err)
+	}
+	if err := s.repo.SetSessionMetadataKey(ctx, sessionID, models.SessionMetaKeyInitialPromptSubmission, submission); err != nil {
+		return s.handleSessionLaunchFailure(ctx, taskID, sessionID,
+			fmt.Errorf("persist initial prompt submission: %w", err))
+	}
+	return nil
+}
+
 func isInheritParentWorkspace(task *v1.Task) bool {
 	if task == nil {
 		return false
@@ -671,6 +696,7 @@ type startCreatedSessionOptions struct {
 	refuseIfAgentRunning        bool
 	initialCreatePrompt         bool
 	beforeInitialPromptDispatch func() error
+	beforeProviderAdmission     func(executionID string) error
 	onExecutionAdmitted         func(executionID string)
 	onInitialPromptAccepted     func(executionID string)
 	onInitialPromptFailed       func()
@@ -1103,6 +1129,7 @@ func (s *Service) configureInitialPromptDispatch(
 	}
 	launchOptions.OnInitialPromptAccepted = options.onInitialPromptAccepted
 	launchOptions.OnInitialPromptFailed = options.onInitialPromptFailed
+	launchOptions.BeforeInitialPromptDispatch = options.beforeProviderAdmission
 	return nil
 }
 
@@ -2231,6 +2258,9 @@ func (s *Service) prepareSessionForStartWithWorkflowRoute(
 		if err := s.persistInitialPromptPreviewFromContext(ctx, task.ID, sessionID); err != nil {
 			return sessionID, created, err
 		}
+		if err := s.persistInitialPromptSubmissionFromContext(ctx, task.ID, sessionID); err != nil {
+			return sessionID, created, err
+		}
 	}
 	return sessionID, created, nil
 }
@@ -2879,14 +2909,37 @@ func (s *Service) backfillInitialUserMessageIfMissing(ctx context.Context, taskI
 	s.recordInitialMessage(ctx, taskID, sessionID, prompt, false, false, nil)
 }
 
+// initialSubmissionUserMessageID keeps the first conversation row idempotent
+// across launch and recovery paths.
+func initialSubmissionUserMessageID(taskID, sessionID string) string {
+	return uuid.NewSHA1(
+		uuid.NameSpaceOID,
+		[]byte("kandev:initial-submission:"+taskID+":"+sessionID),
+	).String()
+}
+
 // recordInitialMessage creates the initial user message and updates session state after launch.
 // autoStart marks the message as having been created by an automated trigger
 // (workflow auto-start, PR/issue watch, Jira/Linear integration) so cleanup
 // logic can distinguish "agent ran on its own" from "user actually engaged".
 func (s *Service) recordInitialMessage(ctx context.Context, taskID, sessionID, prompt string, planModeActive, autoStart bool, attachments []v1.MessageAttachment) {
+	s.recordInitialMessageForTurn(
+		ctx, taskID, sessionID, s.getActiveTurnID(sessionID), prompt, planModeActive, autoStart, attachments,
+	)
+}
+
+func (s *Service) recordInitialMessageForTurn(
+	ctx context.Context,
+	taskID, sessionID, turnID, prompt string,
+	planModeActive, autoStart bool,
+	attachments []v1.MessageAttachment,
+) {
 	if s.messageCreator != nil && (prompt != "" || len(attachments) > 0) {
 		meta := NewUserMessageMeta().WithPlanMode(planModeActive).WithAutoStart(autoStart).WithAttachments(attachments)
-		if err := s.messageCreator.CreateUserMessage(ctx, taskID, prompt, sessionID, s.getActiveTurnID(sessionID), meta.ToMap()); err != nil {
+		if err := s.messageCreator.CreateUserMessageIdempotent(
+			ctx, initialSubmissionUserMessageID(taskID, sessionID), taskID, prompt,
+			sessionID, turnID, meta.ToMap(),
+		); err != nil {
 			s.logger.Error("failed to create initial user message",
 				zap.String("task_id", taskID),
 				zap.Error(err))
@@ -3348,6 +3401,18 @@ func (s *Service) resumeTaskSessionWithContinuation(
 		return nil, ErrResumeAttemptCancelled
 	}
 	defer attempt.finish(s.resumeAttemptStore())
+	initialPromptHeld := false
+	if options.HoldForInitialPrompt {
+		if !s.resumeAttemptStore().holdForInitialPrompt(attempt) {
+			return nil, ErrResumeAttemptCancelled
+		}
+		initialPromptHeld = true
+		defer func() {
+			if initialPromptHeld {
+				s.resumeAttemptStore().abortInitialPromptHold(attempt)
+			}
+		}()
+	}
 	if options.SettingsPolicy == executor.ResumeSettingsPolicyProviderRestored {
 		currentSession, loadErr := s.repo.GetTaskSession(ctx, sessionID)
 		if loadErr != nil {
@@ -3532,24 +3597,26 @@ func (s *Service) resumeTaskSessionWithContinuation(
 	seam4Res.consume()
 	persistBranchRecovery()
 
-	// Backfill the initial user message when a prior failed launch never got
-	// to recordInitialMessage. Without this, the resume can succeed and the
-	// agent starts replying, but the chat shows agent output with no user
-	// prompt above it.
-	//
-	// We use task.Description (the raw user input) rather than the
-	// workflow-effective prompt produced by applyWorkflowAndPlanMode. The
-	// effective prompt may carry a plan-mode prefix or be templated through a
-	// workflow step, but reconstructing the exact prompt the original launch
-	// sent to the agent is brittle (workflow state may have advanced since).
-	// Surfacing the raw description is intentionally conservative: it shows
-	// what the user actually typed, which is what they expect to see in chat.
+	// Owned initial submissions are written after provider acceptance so the
+	// transcript row can use the accepted turn identity. Ordinary resumes keep
+	// their legacy description backfill behavior.
 	if task, taskErr := s.repo.GetTask(resumeCtx, taskID); taskErr != nil {
 		s.logger.Warn("resume: failed to load task for initial message backfill",
 			zap.String("task_id", taskID),
 			zap.Error(taskErr))
 	} else if task != nil {
-		s.backfillInitialUserMessageIfMissing(resumeCtx, taskID, sessionID, task.Description)
+		if options.InitialPromptSubmission == nil {
+			s.backfillInitialUserMessageIfMissing(resumeCtx, taskID, sessionID, task.Description)
+		} else {
+			recorded, recordErr := s.initialSubmissionUserMessageExists(
+				resumeCtx, taskID, sessionID, options.InitialPromptSubmission,
+			)
+			if recordErr != nil {
+				s.logger.Warn("resume: failed to check original submission transcript row",
+					zap.String("task_id", taskID), zap.Error(recordErr))
+			}
+			resumeCtx = withInitialSubmissionTranscriptRecorded(resumeCtx, recordErr == nil && recorded)
+		}
 	}
 
 	s.logger.Debug("task session resumed and ready for input",
@@ -3558,7 +3625,12 @@ func (s *Service) resumeTaskSessionWithContinuation(
 
 	go s.ensureSessionPRWatch(context.Background(), taskID, execution.SessionID, execution.WorktreeBranch)
 	if continuation != nil {
-		return execution, decorateResumeFailure(continuation(resumeCtx, attempt, execution))
+		continuationErr := continuation(resumeCtx, attempt, execution)
+		if initialPromptHeld {
+			s.resumeAttemptStore().releaseInitialPromptHold(attempt)
+			initialPromptHeld = false
+		}
+		return execution, decorateResumeFailure(continuationErr)
 	}
 
 	return execution, nil
@@ -5450,6 +5522,7 @@ func (s *Service) deleteSessionAndCleanAttachments(ctx context.Context, session 
 	if remover, ok := s.attachmentReader.(attachmentBytesRemover); ok {
 		remover.RemoveBytes(deletedAttachments)
 	}
+	s.deletePendingDynamicStreakReset(session.ID)
 	return nil
 }
 
@@ -6305,6 +6378,13 @@ type promptTaskOptions struct {
 	// rotates the session before the durable submission is created must force
 	// recovery instead of sending the snapshot to the wrong harness.
 	expectedDeliveryGeneration int64
+	// firstLaunchPromptContext rebuilds the trusted first-conversation Kandev
+	// instructions around the effective prompt after session config/plan rules.
+	firstLaunchPromptContext bool
+	// preserveInitialSubmissionReplay identifies the owner dispatch that is
+	// allowed to advance the pending receipt instead of retiring it as later work.
+	preserveInitialSubmissionReplay bool
+	retireInitialSubmissionReplay   bool
 	// promptAlreadyComposed and fallbackRetryPrompt mirror the composed-prompt
 	// seam autoStartStepPrompt's own ErrExecutionNotFound branch uses (see
 	// fallbackFreshLaunchOnMissingExecution). When promptAlreadyComposed is
@@ -6523,6 +6603,24 @@ func (s *Service) promptTask(ctx context.Context, taskID, sessionID string, prom
 	}
 	if options.internalContinuation {
 		effectivePrompt = prompt
+	}
+	if !options.preserveInitialSubmissionReplay {
+		submission, found, loadErr := models.LoadInitialPromptSubmission(session.Metadata)
+		if loadErr != nil {
+			s.rollbackForegroundDispatchOnFailure(resumePromptCtx, taskID, sessionID, foregroundDispatch)
+			return nil, fmt.Errorf("load initial submission provenance before prompt dispatch: %w", loadErr)
+		}
+		options.retireInitialSubmissionReplay = found &&
+			submission.State == models.InitialPromptSubmissionPending
+	}
+	if options.firstLaunchPromptContext {
+		effectivePrompt, err = s.wrapInitialSubmissionReplayPrompt(
+			resumePromptCtx, taskID, sessionID, effectivePrompt, attachments, session,
+		)
+		if err != nil {
+			s.rollbackForegroundDispatchOnFailure(resumePromptCtx, taskID, sessionID, foregroundDispatch)
+			return nil, err
+		}
 	}
 	if options.fallbackUsesEffectivePrompt {
 		options.fallbackLaunchPrompt = effectivePrompt
@@ -6749,7 +6847,8 @@ func (s *Service) preparePromptAdmissionCallback(
 	resumeAttempt *resumeAttempt,
 ) func() error {
 	guard := rollback.dispatchGuard
-	if guard == nil && options.liveExecutionFence == nil {
+	if guard == nil && options.liveExecutionFence == nil && options.beforeProviderAdmission == nil &&
+		!options.retireInitialSubmissionReplay {
 		return nil
 	}
 	// Prompt preparation may synchronously publish stream events, so it runs
@@ -6774,6 +6873,20 @@ func (s *Service) preparePromptAdmissionCallback(
 		}
 		if options.liveExecutionFence != nil {
 			if err := s.validatePromptLiveExecutionFence(ctx, taskID, sessionID, options.liveExecutionFence); err != nil {
+				if guard != nil {
+					guard.unlock()
+				}
+				return markPromptAdmissionRejected(err)
+			}
+		}
+		if options.retireInitialSubmissionReplay {
+			executionID := session.AgentExecutionID
+			if resumeAttempt != nil && resumeAttempt.execution() != "" {
+				executionID = resumeAttempt.execution()
+			}
+			if err := s.beginInitialSubmissionReplayRetirement(
+				ctx, sessionID, executionID, rollback.turnID,
+			); err != nil {
 				if guard != nil {
 					guard.unlock()
 				}
@@ -7062,6 +7175,16 @@ func (s *Service) finishPromptExecutorDispatch(
 	resumeAttempt *resumeAttempt, delivery *agentDeliverySubmissionRuntime,
 ) (*PromptResult, error) {
 	dispatchAccepted, publicationErr := dispatchOutcome.snapshot()
+	if options.retireInitialSubmissionReplay && !dispatchAccepted {
+		restoreCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), promptFailureCleanupTimeout)
+		if err := s.restoreInitialSubmissionReplayAfterRejectedPrompt(
+			restoreCtx, sessionID, rollback.turnID,
+		); err != nil {
+			s.logger.Warn("failed to restore original task submission after rejected prompt",
+				zap.String("session_id", sessionID), zap.Error(err))
+		}
+		cancel()
+	}
 	if dispatchAccepted && options.promptAccepted != nil {
 		options.promptAccepted.Store(true)
 	}
@@ -7237,6 +7360,26 @@ func (s *Service) preparePromptDispatchCallback(
 	dispatchOutcome = &promptDispatchOutcome{}
 	dispatchOutcome.turnID = rollback.turnID
 	dispatchOutcome.onAccepted = options.onAccepted
+	acceptedExecutionID := session.AgentExecutionID
+	if resumeAttempt != nil && resumeAttempt.execution() != "" {
+		acceptedExecutionID = resumeAttempt.execution()
+	}
+	if options.retireInitialSubmissionReplay {
+		originalOnAccepted := dispatchOutcome.onAccepted
+		dispatchOutcome.onAccepted = func(turnID string) {
+			retireCtx, cancel := context.WithTimeout(context.WithoutCancel(promptCtx), 5*time.Second)
+			defer cancel()
+			if err := s.blockInitialSubmissionReplayForOtherPrompt(
+				retireCtx, sessionID, acceptedExecutionID, turnID,
+			); err != nil {
+				s.logger.Warn("failed to retire original task submission after later prompt acceptance",
+					zap.String("session_id", sessionID), zap.Error(err))
+			}
+			if originalOnAccepted != nil {
+				originalOnAccepted(turnID)
+			}
+		}
+	}
 	if options.promptAccepted != nil {
 		originalOnAccepted := dispatchOutcome.onAccepted
 		dispatchOutcome.onAccepted = func(turnID string) {
@@ -7246,7 +7389,6 @@ func (s *Service) preparePromptDispatchCallback(
 			}
 		}
 	}
-	acceptedExecutionID := session.AgentExecutionID
 	onDispatched = s.promptDispatchCallbackForIdentity(
 		promptCtx, taskID, sessionID, rollback.sessionIdentity,
 		acceptedExecutionID, rollback.reservedTurn, foregroundDispatch, dispatchOutcome,
@@ -9694,6 +9836,9 @@ func (s *Service) drainQueuedMessageForPromptableSessionLockedForIdentity(ctx co
 	}
 	if err := s.checkSessionRecoveryBlock(ctx, identity.SessionID); err != nil {
 		return false, err
+	}
+	if s.resumeAttemptStore().holdsInitialPromptForSession(identity.SessionID) {
+		return false, nil
 	}
 	queuedMsg, ok, autoRun, err := s.messageQueue.ReserveQueuedWithAutoRunForSession(ctx, identity)
 	if err != nil {
