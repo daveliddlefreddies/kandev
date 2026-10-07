@@ -14,7 +14,7 @@ import {
   type ChatInputContainerHandle,
 } from "@/components/task/chat/chat-input-container";
 import { QueueAffordance } from "@/components/task/chat/queued-ghost-list";
-import { ComposerAgentStartHint } from "./composer-agent-start-hint";
+import { ComposerStatusNotices } from "./composer-status-notices";
 import {
   formatReviewCommentsAsMarkdown,
   formatPRFeedbackAsMarkdown,
@@ -26,15 +26,13 @@ import { useExecutorEnvironmentAvailability } from "@/hooks/domains/session/use-
 import { useToast } from "@/components/toast-provider";
 import { isMessageSendError, MessageSendError } from "@/lib/chat/message-send-error";
 import { QueueAdmissionError, QueueFullError } from "@/lib/api/domains/queue-api";
-import type { ReviewComment } from "@/lib/state/slices/comments";
-import type { AgentMessageComment } from "@/lib/state/slices/comments";
+import type { ReviewComment, AgentMessageComment } from "@/lib/state/slices/comments";
 import type { ChatPanelState } from "./use-chat-panel-state";
 import { useComposerProps } from "./use-composer-props";
 import { cn } from "@/lib/utils";
 import { useComposerWorkspace } from "@/hooks/domains/task/use-composer-workspace";
 import { t } from "@/lib/i18n";
 import { ChatStatusBar, ComposerCIStatus, resolveStatusRowTaskId } from "./chat-status-bar";
-import { DynamicRouteRecovery } from "./dynamic-route-recovery";
 import {
   hasPendingClarification,
   shouldHideChatInputForLaunchError,
@@ -42,7 +40,6 @@ import {
 } from "./types";
 import { toTaskPlanCommentRefs } from "@/lib/plan-comment-refs";
 import { toTaskPreviewFeedbackRefs } from "@/lib/preview-feedback-refs";
-import { PlanCommentMigrationNotice } from "@/components/task/plan-comment-migration-notice";
 import { PreviewFeedbackCollectionSurface } from "@/components/task/inspector/preview-feedback-collection";
 import {
   ComposerCollapseButton,
@@ -202,16 +199,19 @@ function usePanelMessageHandler(panelState: ChatPanelState) {
   });
 }
 
-function completeChatSubmission(payload: ChatSubmitPayload, panelState: ChatPanelState) {
+function completeChatSubmission(
+  payload: ChatSubmitPayload,
+  panelState: ChatPanelState,
+  submittedContext: { sessionId: string | null; files: ChatPanelState["contextFiles"] },
+) {
   const {
-    resolvedSessionId,
     pendingPRFeedback,
     walkthroughComments,
     messageComments,
     markCommentsSent,
     handleClearPRFeedback,
     handleClearWalkthroughComments,
-    clearEphemeral,
+    consumeSubmittedEphemeral,
     addContextFile,
     planModeEnabled,
   } = panelState;
@@ -219,10 +219,10 @@ function completeChatSubmission(payload: ChatSubmitPayload, panelState: ChatPane
   if (messageComments.length > 0) markCommentsSent(messageComments.map((c) => c.id));
   if (pendingPRFeedback.length > 0) handleClearPRFeedback();
   if (walkthroughComments.length > 0) handleClearWalkthroughComments();
-  if (!resolvedSessionId) return true;
-  clearEphemeral(resolvedSessionId);
+  if (!submittedContext.sessionId) return true;
+  consumeSubmittedEphemeral(submittedContext.sessionId, submittedContext.files);
   if (planModeEnabled) {
-    addContextFile(resolvedSessionId, { path: PLAN_CONTEXT_PATH, name: "Plan" });
+    addContextFile(submittedContext.sessionId, { path: PLAN_CONTEXT_PATH, name: "Plan" });
   }
   return true;
 }
@@ -242,6 +242,10 @@ async function submitChatPayload({
   handleSendMessage: (payload: ChatSubmitPayload) => Promise<void | boolean>;
   transformOutgoing?: (message: string) => string;
 }) {
+  const submittedContext = {
+    sessionId: panelState.resolvedSessionId,
+    files: panelState.contextFiles.filter((file) => file.pinned !== true),
+  };
   const {
     planComments,
     previewFeedback,
@@ -277,7 +281,7 @@ async function submitChatPayload({
     submissionResult = await handleSendMessage(outbound);
   }
   if (submissionResult === false) return false;
-  return completeChatSubmission(payload, panelState);
+  return completeChatSubmission(payload, panelState, submittedContext);
 }
 
 export type SubmitHandlerOptions = {
@@ -537,29 +541,6 @@ function PreviewFeedbackFallbackSurface({
       onOpenChange={panelState.setPreviewFeedbackOpen ?? setFallbackOpen}
       showTrigger={showTrigger}
     />
-  );
-}
-
-function ComposerStatusNotices({
-  panelState,
-  showAgentStartHint,
-  executorUnavailable,
-}: {
-  panelState: ChatPanelState;
-  showAgentStartHint: boolean;
-  executorUnavailable: boolean;
-}) {
-  return (
-    <>
-      <DynamicRouteRecovery session={panelState.session} />
-      <ComposerAgentStartHint
-        show={showAgentStartHint}
-        needsRecovery={panelState.needsRecovery}
-        executorUnavailable={executorUnavailable}
-        hasPendingClarification={Boolean(panelState.pendingClarification)}
-      />
-      <PlanCommentMigrationNotice {...panelState.planCommentMigration} />
-    </>
   );
 }
 

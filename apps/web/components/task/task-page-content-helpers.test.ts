@@ -17,7 +17,6 @@ import {
   resolveTaskContentState,
   resolveTaskProps,
   selectWorkspaceRepositories,
-  shouldLoadWorkspaceRepositories,
   syncActiveTaskSession,
 } from "./task-page-content-helpers";
 
@@ -329,27 +328,6 @@ describe("selectWorkspaceRepositories", () => {
   });
 });
 
-describe("shouldLoadWorkspaceRepositories", () => {
-  it("skips local repository loading for Cursor Cloud tasks", () => {
-    expect(
-      shouldLoadWorkspaceRepositories({
-        workspace_id: toWorkspaceId("ws-1"),
-        primary_executor_type: "cursor_cloud",
-      }),
-    ).toBe(false);
-  });
-
-  it("loads local repositories only when the task has a workspace", () => {
-    expect(
-      shouldLoadWorkspaceRepositories({
-        workspace_id: toWorkspaceId("ws-1"),
-        primary_executor_type: "local",
-      }),
-    ).toBe(true);
-    expect(shouldLoadWorkspaceRepositories(null)).toBe(false);
-  });
-});
-
 describe("buildArchivedValue repository identity", () => {
   // The archived row renders this value, so a local clone path here would put
   // "/home/dev/src/kandev" in the sidebar and give archived tasks a different
@@ -391,6 +369,7 @@ describe("resolveTaskContentState", () => {
       resolveTaskContentState({
         isMounted: false,
         hasTask: false,
+        hasTaskDetails: false,
         hasTaskLoadError: true,
       }),
     ).toBe("loading");
@@ -401,16 +380,29 @@ describe("resolveTaskContentState", () => {
       resolveTaskContentState({
         isMounted: true,
         hasTask: false,
+        hasTaskDetails: false,
         hasTaskLoadError: true,
       }),
     ).toBe("error");
   });
 
-  it("surfaces task load failures even when a placeholder task exists", () => {
+  it("keeps authoritative task details ready when a refresh fails", () => {
     expect(
       resolveTaskContentState({
         isMounted: true,
         hasTask: true,
+        hasTaskDetails: true,
+        hasTaskLoadError: true,
+      }),
+    ).toBe("ready");
+  });
+
+  it("surfaces a read failure when only a projected task row exists", () => {
+    expect(
+      resolveTaskContentState({
+        isMounted: true,
+        hasTask: true,
+        hasTaskDetails: false,
         hasTaskLoadError: true,
       }),
     ).toBe("error");
@@ -421,6 +413,7 @@ describe("resolveTaskContentState", () => {
       resolveTaskContentState({
         isMounted: true,
         hasTask: true,
+        hasTaskDetails: true,
         hasTaskLoadError: false,
       }),
     ).toBe("ready");

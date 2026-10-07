@@ -240,32 +240,33 @@ func initCoreTaskServices(
 	}
 	taskSvc := taskservice.NewService(
 		taskservice.Repos{
-			Workspaces:        repos.Task,
-			Tasks:             repos.Task,
-			TaskRepos:         repos.Task,
-			WorkspaceFolders:  repos.Task,
-			Workflows:         repos.Task,
-			Messages:          repos.Task,
-			Attachments:       repos.Task,
-			Turns:             repos.Task,
-			Sessions:          repos.Task,
-			GitSnapshots:      repos.Task,
-			RepoEntities:      repos.Task,
-			DiscoveryRoots:    repos.Task,
-			RepositorySets:    repos.Task,
-			BranchPolicies:    repos.Task,
-			RepositoryCleanup: repos.Task,
-			Executors:         repos.Task,
-			Environments:      repos.Task,
-			TaskEnvironments:  repos.Task,
-			Reviews:           repos.Task,
-			ResourceCleanups:  repos.Task,
-			StatusSummaries:   repos.Task,
-			TaskActivity:      repos.Task,
-			SubagentContexts:  repos.Task,
-			Usage:             repos.Task,
-			BackgroundWork:    repos.Task,
-			AgentProfiles:     repos.AgentSettings,
+			Workspaces:         repos.Task,
+			Tasks:              repos.Task,
+			TaskRepos:          repos.Task,
+			WorkspaceFolders:   repos.Task,
+			Workflows:          repos.Task,
+			Messages:           repos.Task,
+			Attachments:        repos.Task,
+			Turns:              repos.Task,
+			Sessions:           repos.Task,
+			GitSnapshots:       repos.Task,
+			RepoEntities:       repos.Task,
+			DiscoveryRoots:     repos.Task,
+			RepositorySets:     repos.Task,
+			BranchPolicies:     repos.Task,
+			RepositoryCleanup:  repos.Task,
+			Executors:          repos.Task,
+			Environments:       repos.Task,
+			TaskEnvironments:   repos.Task,
+			Reviews:            repos.Task,
+			ResourceCleanups:   repos.Task,
+			StatusSummaries:    repos.Task,
+			TaskActivity:       repos.Task,
+			SubagentContexts:   repos.Task,
+			Usage:              repos.Task,
+			BackgroundWork:     repos.Task,
+			RecoveryOperations: repos.Task,
+			AgentProfiles:      repos.AgentSettings,
 			AgentProfileExecutorValidator: taskAgentExecutorCompatibilityValidator{
 				profiles:           repos.AgentSettings,
 				agentRegistry:      agentRegistry,
@@ -284,6 +285,9 @@ func initCoreTaskServices(
 		},
 	)
 	taskSvc.SetCursorCloudEnabled(cfg.Features.CursorCloud)
+	if err := taskSvc.ReconcileWorkspaceRecoveryOperations(ctx); err != nil {
+		return nil, fmt.Errorf("reconcile managed workspace recovery operations: %w", err)
+	}
 	wireSidebarWorkspaceAccess(userSvc, taskSvc)
 	taskSvc.SetPendingActionProjectionEpoch(pendingActionProjectionEpoch)
 	// Workspace membership needs to resolve colleague names and reject
@@ -328,6 +332,10 @@ func initManagedRuntimeAndDiscovery(
 		return nil, nil, fmt.Errorf("initialize managed runtime settings: required store is unavailable")
 	}
 	managedRuntimeSelections := managedruntime.NewStore(managedRuntimeSettings)
+	if err := bootstrapOpenCodeSelection(ctx, managedRuntimeSelections, repos, agentRegistry, log); err != nil {
+		return nil, nil, fmt.Errorf("OpenCode runtime selection bootstrap: %w", err)
+	}
+	agentRegistry.SetManagedRuntimeSelectionStore(managedRuntimeSelections)
 	if err := reconcileManagedRuntimeDefaults(ctx, managedRuntimeSelections, agentRegistry, log); err != nil {
 		return nil, nil, fmt.Errorf("reconcile managed runtime defaults: %w", err)
 	}
