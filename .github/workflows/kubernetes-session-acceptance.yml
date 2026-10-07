@@ -37,8 +37,6 @@ jobs:
       GOFLAGS: "-p=1"
       MAKEFLAGS: "GOFLAGS=-p=1"
       NODE_OPTIONS: "--max-old-space-size=3072"
-      PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ github.workspace }}/apps/web/e2e/blob-report
-      PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/kubernetes-session-acceptance-results.json
       KUBERNETES_E2E_BASE_IMAGE: ghcr.io/kdlbs/kandev-ci:runtime-sha-6f288a23c526@sha256:b9636e1c20adb0fcce1c65858a767fb1b0fe48a15ac5688b9c623163575efb8d
 
     steps:
@@ -114,6 +112,9 @@ jobs:
 
       - name: Run five real Kubernetes acceptance scenarios
         working-directory: apps/web
+        env:
+          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ github.workspace }}/apps/web/e2e/blob-report
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/kubernetes-session-acceptance-results.json
         run: |
           pnpm e2e:run --host --shards 1 --project containers \
             tests/kubernetes/kubernetes-session-resilience.spec.ts \
@@ -122,7 +123,7 @@ jobs:
             --retries 0 --max-failures 0 --reporter=blob,list,json
 
       - name: Require five executed passes
-        run: node .github/scripts/verify-kubernetes-session-acceptance.cjs "$PLAYWRIGHT_JSON_OUTPUT_NAME"
+        run: node .github/scripts/verify-kubernetes-session-acceptance.cjs "${{ runner.temp }}/kubernetes-session-acceptance-results.json"
 
       - name: Delete exact Kind cluster
         if: always()

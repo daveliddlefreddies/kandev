@@ -256,3 +256,14 @@ observed red before these artifacts existed, then passed; the expanded workflow
 suite passed21 cases and the preparation suite passed4. All27 workflows are
 SHA-pinned. This is source verification only; live acceptance remains blocked
 until the focused job executes its actual fault assertions.
+
+The first focused workflow revision was rejected by GitHub before creating a
+job: runner.temp was used in job-level env, where runner context is unavailable.
+Reporter paths now live in the execution step, and result verification reads the
+same runner-temp path directly. A targeted scope regression was observed red
+before that correction; the expanded22-case workflow contract suite passed after
+the fix. No image build or acceptance assertion executed in the rejected run.
+
+Pinned actionlint1.7.7 passed workflow schema/expression validation after the
+correction (external ShellCheck disabled); focused workflow shell blocks had
+separately passed bash syntax validation. Formatting and whitespace passed.

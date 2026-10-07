@@ -66,6 +66,14 @@ class E2EWorkflowContractTest(unittest.TestCase):
         self.assertIn('GOMAXPROCS: "2"', workflow)
         self.assertIn("verify-kubernetes-session-acceptance.cjs", workflow)
 
+    def test_session_acceptance_scopes_runner_paths_to_steps(self):
+        workflow = SESSION_ACCEPTANCE_WORKFLOW.read_text()
+        job_env = workflow.split("    env:\n", 1)[1].split("    steps:\n", 1)[0]
+        self.assertNotIn("runner.", job_env, "runner context is unavailable in job env")
+        execute = workflow.split("      - name: Run five real Kubernetes acceptance scenarios\n", 1)[1]
+        self.assertIn("PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}", execute)
+        self.assertIn('verify-kubernetes-session-acceptance.cjs "${{ runner.temp }}', execute)
+
     def test_session_acceptance_preserves_exact_cleanup_and_failure_artifacts(self):
         workflow = SESSION_ACCEPTANCE_WORKFLOW.read_text()
         self.assertIn("if: always()", workflow)
