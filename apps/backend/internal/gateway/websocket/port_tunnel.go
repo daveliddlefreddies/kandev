@@ -220,7 +220,25 @@ func (m *TunnelManager) resolveAndBind(sessionID string, tunnelPort int) (*url.U
 		return nil, nil, nil, fmt.Errorf("failed to bind tunnel port %d: %w", tunnelPort, err)
 	}
 
-	return target, transport, ln, nil
+	return target, transport, newTunnelListener(ln), nil
+}
+
+// Both HTTP server cancellation and manager teardown close this listener.
+// TCPListener's second Close may return before the first closer releases its
+// descriptor. Share a guard so every caller waits until it is actually closed.
+type tunnelListener struct {
+	net.Listener
+	closeOnce sync.Once
+	closeErr  error
+}
+
+func newTunnelListener(ln net.Listener) net.Listener {
+	return &tunnelListener{Listener: ln}
+}
+
+func (ln *tunnelListener) Close() error {
+	ln.closeOnce.Do(func() { ln.closeErr = ln.Listener.Close() })
+	return ln.closeErr
 }
 
 // serveTunnel starts the tunnel HTTP server and its shutdown goroutine.
