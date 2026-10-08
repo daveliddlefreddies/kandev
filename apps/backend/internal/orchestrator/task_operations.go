@@ -2999,9 +2999,13 @@ func (s *Service) buildWorkflowPromptWithTrustedContextOptions(
 ) (string, string) {
 	_ = sessionID
 	var parts []string
+	var taskTitleReferences []string
 
-	if block := s.workflowInstructionsBlock(ctx, step, taskID); block != "" {
+	if block, title := s.workflowInstructionsBlock(ctx, step, taskID); block != "" {
 		parts = append(parts, block)
+		if title != "" {
+			taskTitleReferences = append(taskTitleReferences, title)
+		}
 	}
 
 	// skip_step_prompt suppresses the step prompt and its task-description
@@ -3016,7 +3020,10 @@ func (s *Service) buildWorkflowPromptWithTrustedContextOptions(
 		// The step is copied rather than mutated in place because it may be a
 		// cached/shared *wfmodels.WorkflowStep.
 		interpolated := s.interpolateStepEntryNumberIfPresent(ctx, step.Prompt, taskID, step.ID)
-		interpolated, finalizeTitle := s.reserveTaskTitleInStepTemplate(ctx, interpolated, taskID)
+		interpolated, title, finalizeTitle := s.reserveTaskTitleInStepTemplate(ctx, interpolated, taskID)
+		if title != "" {
+			taskTitleReferences = append(taskTitleReferences, title)
+		}
 		interpolatedStep := step
 		if interpolated != step.Prompt {
 			stepCopy := *step
@@ -3027,17 +3034,26 @@ func (s *Service) buildWorkflowPromptWithTrustedContextOptions(
 	}
 
 	joined := strings.Join(parts, "\n\n")
-	if trustedPromptContext != "" {
-		trustedBlock := sysprompt.Wrap(trustedPromptContext)
-		if !strings.Contains(joined, trustedBlock) {
-			joined += "\n\n" + trustedBlock
-		}
-		return joined, trustedPromptContext
+	if trustedPromptContext == "" && !promptReferencesPrepared {
+		return s.expandPromptReferencesWithContext(ctx, joined, isPassthrough)
 	}
-	if promptReferencesPrepared {
+	acceptedContext := trustedPromptContext
+	if len(taskTitleReferences) > 0 {
+		trustedPromptContext = s.appendTitlePromptReferencesToTrustedContext(
+			ctx, strings.Join(taskTitleReferences, "\n\n"), trustedPromptContext, isPassthrough,
+		)
+	}
+	if acceptedContext != "" && trustedPromptContext != acceptedContext {
+		joined = strings.Replace(joined, sysprompt.Wrap(acceptedContext), sysprompt.Wrap(trustedPromptContext), 1)
+	}
+	if trustedPromptContext == "" {
 		return joined, ""
 	}
-	return s.expandPromptReferencesWithContext(ctx, joined, isPassthrough)
+	trustedBlock := sysprompt.Wrap(trustedPromptContext)
+	if strings.Contains(joined, trustedBlock) {
+		return joined, trustedPromptContext
+	}
+	return joined + "\n\n" + trustedBlock, trustedPromptContext
 }
 
 // stepPromptBody renders the visible step prompt for one entry: the step's
@@ -3067,9 +3083,9 @@ func stepPromptBodyWithOptions(step *wfmodels.WorkflowStep, taskID, basePrompt s
 // workflowInstructionsBlock returns the visible "## Workflow instructions"
 // section when the step's workflow has a non-empty prompt. Empty/whitespace
 // prompts and missing getters/workflows omit the section entirely.
-func (s *Service) workflowInstructionsBlock(ctx context.Context, step *wfmodels.WorkflowStep, taskID string) string {
+func (s *Service) workflowInstructionsBlock(ctx context.Context, step *wfmodels.WorkflowStep, taskID string) (string, string) {
 	if s.workflowStepGetter == nil || step == nil || step.WorkflowID == "" {
-		return ""
+		return "", ""
 	}
 	meta, err := s.getWorkflowMeta(ctx, step.WorkflowID)
 	if err != nil {
@@ -3078,28 +3094,28 @@ func (s *Service) workflowInstructionsBlock(ctx context.Context, step *wfmodels.
 				zap.String("workflow_id", step.WorkflowID),
 				zap.Error(err))
 		}
-		return ""
+		return "", ""
 	}
 	prompt := strings.TrimSpace(meta.Prompt)
 	if prompt == "" {
-		return ""
+		return "", ""
 	}
 	interpolated := sysprompt.InterpolatePlaceholders(prompt, taskID)
 	interpolated = s.interpolateStepEntryNumberIfPresent(ctx, interpolated, taskID, step.ID)
 	// The title is substituted last so its text is never scanned for tokens.
-	interpolated = s.interpolateTaskTitleIfPresent(ctx, interpolated, taskID)
+	interpolated, title := s.interpolateTaskTitleIfPresent(ctx, interpolated, taskID)
 	interpolated = strings.TrimSpace(interpolated)
 	if interpolated == "" {
-		return ""
+		return "", ""
 	}
 	// Drop any accidental end-marker text from user content so chat split
 	// cannot cut the block early (frontend also prefers the final marker).
 	interpolated = strings.ReplaceAll(interpolated, workflowInstructionsEnd, "")
 	interpolated = strings.TrimSpace(interpolated)
 	if interpolated == "" {
-		return ""
+		return "", ""
 	}
-	return workflowInstructionsHeading + "\n\n" + interpolated + "\n\n" + workflowInstructionsEnd
+	return workflowInstructionsHeading + "\n\n" + interpolated + "\n\n" + workflowInstructionsEnd, title
 }
 
 // stepEntryNumberToken is the exact literal REQ-TWS-001 substitutes in
@@ -3174,6 +3190,22 @@ func (s *Service) expandPromptReferencesWithContext(
 		zapLogger = s.logger.Zap()
 	}
 	return s.promptExpander.AppendReferenceExpansionsWithContext(ctx, prompt, zapLogger)
+}
+
+func (s *Service) appendTitlePromptReferencesToTrustedContext(
+	ctx context.Context,
+	title string,
+	trustedContext string,
+	isPassthrough bool,
+) string {
+	if s.promptExpander == nil || isPassthrough || !strings.Contains(title, "@") {
+		return trustedContext
+	}
+	var zapLogger *zap.Logger
+	if s.logger != nil {
+		zapLogger = s.logger.Zap()
+	}
+	return s.promptExpander.AppendReferenceExpansionsToTrustedContext(ctx, title, trustedContext, zapLogger)
 }
 
 // PrepareDirectPrompt applies the same backend-owned saved-prompt expansion

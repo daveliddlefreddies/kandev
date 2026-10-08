@@ -34,31 +34,31 @@ func (s *Service) lookupTaskTitleForTemplate(ctx context.Context, template, task
 }
 
 // interpolateTaskTitleIfPresent substitutes every occurrence of {task_title}
-// in template. Callers apply it after every other placeholder so the title's
-// own text is never scanned for tokens.
-func (s *Service) interpolateTaskTitleIfPresent(ctx context.Context, template, taskID string) string {
+// in template and returns the inserted title. Callers apply it after every
+// other placeholder so the title's own text is never scanned for tokens.
+func (s *Service) interpolateTaskTitleIfPresent(ctx context.Context, template, taskID string) (string, string) {
 	title, ok := s.lookupTaskTitleForTemplate(ctx, template, taskID)
 	if !ok {
-		return template
+		return template, ""
 	}
-	return strings.ReplaceAll(template, taskTitleToken, title)
+	return strings.ReplaceAll(template, taskTitleToken, title), title
 }
 
 // reserveTaskTitleInStepTemplate replaces {task_title} in a step template with
-// a per-build sentinel and returns a finalizer that swaps the sentinel for the
-// title. The step template still passes through {task_id} and {{task_prompt}}
-// substitution in between; the sentinel keeps the title out of that pass, and
-// because it is unguessable it cannot occur in the base prompt, so only
+// a per-build sentinel and returns the inserted title plus a finalizer that
+// swaps the sentinel for the title. The step template still passes through
+// {task_id} and {{task_prompt}} substitution in between. The sentinel keeps
+// the title out of that pass and cannot occur in the base prompt, so only
 // positions authored in the step template receive the title. When no title is
 // substituted the template is returned unchanged with an identity finalizer.
-func (s *Service) reserveTaskTitleInStepTemplate(ctx context.Context, template, taskID string) (string, func(string) string) {
+func (s *Service) reserveTaskTitleInStepTemplate(ctx context.Context, template, taskID string) (string, string, func(string) string) {
 	title, ok := s.lookupTaskTitleForTemplate(ctx, template, taskID)
 	if !ok {
-		return template, func(body string) string { return body }
+		return template, "", func(body string) string { return body }
 	}
 	sentinel := "\x00kandev-task-title-" + uuid.NewString() + "\x00"
 	reserved := strings.ReplaceAll(template, taskTitleToken, sentinel)
-	return reserved, func(body string) string {
+	return reserved, title, func(body string) string {
 		return strings.ReplaceAll(body, sentinel, title)
 	}
 }

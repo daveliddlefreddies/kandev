@@ -184,7 +184,17 @@ receive the title, and `stepPromptBodyWithOptions` is unchanged. In
 `workflowInstructionsBlock` the title is substituted after `{task_id}` and
 `{step_entry_number}`, before the end-marker strip, so no sentinel is needed
 there. Saved-prompt expansion still sees the title, matching how it treats the
-base prompt (AC-TWS-006.9).
+base prompt (AC-TWS-006.9) when the prompt is not already prepared.
+
+A direct chat message is prepared before the orchestrator adds workflow text.
+The preparation result is an acceptance-time snapshot, including an empty
+result, so the orchestrator must not resolve that message again. When a title
+is inserted after preparation, the orchestrator resolves references from the
+title text only and adds new definitions to the trusted context. A reference
+already present in the accepted context keeps its accepted definition. This
+preserves the direct-message acceptance contract while supporting title
+references in prepared chat launches. Passthrough sessions still skip hidden
+saved-prompt expansion.
 
 ## E2E decision input
 
