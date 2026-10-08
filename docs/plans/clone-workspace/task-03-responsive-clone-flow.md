@@ -120,6 +120,7 @@ Task 04 owns targeted managed production-build browser verification.
 - `apps/web/components/settings/workspaces/workspace-actions-menu.tsx`.
 - `apps/web/components/settings/workspaces/workspace-settings-shell.tsx` and `.test.tsx`.
 - `apps/web/hooks/domains/workspace/use-workspace-clone.ts` and `.test.ts` (new).
+- `apps/web/src/settings-routes.coordinators.test.tsx`.
 - `apps/web/lib/types/http.ts` if a named request type is useful.
 - `apps/web/src/locales/{en,pt-pt,zh-cn,zh-hk,zh-tw,ja,ko}/workspaces.json`.
 - Generated pseudo-locale artifacts only through the existing i18n scripts.
@@ -197,3 +198,21 @@ The final actions-menu revision passed 33 targeted unit tests (clone action,
 shared hook and settings switcher), scoped ESLint, TypeScript, all locale gates,
 and the six browser flows recorded in Task 04. New code reuses one menu and
 closes it before opening the shared form; persistent triggers retain focus.
+
+### PR CI route-fixture repair
+
+Frontend CI on head `978267ccbdf521f5145ed72de7aadbfdce7961a0`
+failed three coordinator-route tests because their narrow state-provider mock
+did not expose the store API required by the new settings-header clone hook.
+The local reproduction failed the same three tests. The routing fixture now
+mocks the clone interaction hook while retaining the module's real eligibility
+helper. Clone behavior remains covered by the hook and browser tests.
+
+The expanded targeted run passed 82 tests across nine files: all settings-route
+suites, the workspace settings shell and the clone hook. Scoped ESLint and
+Prettier and TypeScript checks passed. This changes test isolation only; the product contract,
+responsive UI and public documentation remain unchanged.
+
+```bash
+(cd apps/web && pnpm exec vitest run src/settings-routes.coordinators.test.tsx src/settings-routes.test.ts src/settings-routes.workspace-data.test.tsx src/settings-routes.workspace-revision.test.tsx src/settings-routes.bootstrap.test.ts src/settings-routes.feature-toggles.test.tsx src/settings-routes.plugin.test.ts components/settings/workspaces/workspace-settings-shell.test.tsx hooks/domains/workspace/use-workspace-clone.test.ts --maxWorkers=1)
+```

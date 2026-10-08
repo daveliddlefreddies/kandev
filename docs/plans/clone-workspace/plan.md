@@ -246,3 +246,9 @@ A local PostgreSQL 16 reproduction failed identically; reloading the source
 through the repository before cloning fixed the fixture. All eight coordinator
 clone tests then passed three race-enabled repetitions with PostgreSQL enabled.
 The production stale-source guard remains the owning concurrency contract.
+
+Frontend CI also exposed three coordinator-route fixture failures after the
+shared settings header acquired clone actions. Local reproduction confirmed
+the missing store API in the route fixture's state-provider mock. Isolating
+the clone interaction at that routing test boundary passed 82 tests across
+nine affected suites. Task 03 records the exact command and fixture repair.
