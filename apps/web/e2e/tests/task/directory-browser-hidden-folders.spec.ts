@@ -3,7 +3,6 @@ import { waitForSessionDone } from "../../helpers/session";
 import { controlHeight } from "../../helpers/control-sizing";
 import { mockFolderAvailability } from "../../helpers/open-task-folder";
 import type { Locator, Page } from "@playwright/test";
-import { SessionPage } from "../../pages/session-page";
 import fs from "node:fs";
 import path from "node:path";
 import { SessionPage } from "../../pages/session-page";
