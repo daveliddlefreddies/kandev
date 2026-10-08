@@ -399,3 +399,27 @@ func admitBackendDeliverySubmission(
 	}
 	return ""
 }
+
+func (s *Service) PromptTaskWithDeliverySubmissionID(
+	ctx context.Context,
+	taskID, sessionID, prompt, model string,
+	planMode bool,
+	attachments []v1.MessageAttachment,
+	dispatchOnly bool,
+	submissionID string,
+	accepted ...DirectPromptStartOptions,
+) (*PromptResult, error) {
+	options := promptTaskOptions{deliverySubmissionID: submissionID}
+	if len(accepted) > 0 {
+		options.promptAlreadyComposed = true
+		options.fallbackUsesEffectivePrompt = true
+		options.promptReferenceContext = accepted[0].PromptReferenceContext
+		options.promptReferencesPrepared = accepted[0].PromptReferencesPrepared
+		options.entityReferences = append([]v1.EntityReference(nil), accepted[0].References...)
+		options.initialTaskBriefDispatchOwner = accepted[0].InitialTaskBriefDispatchOwner
+	}
+	return s.promptTask(
+		ctx, taskID, sessionID, prompt, model, planMode, attachments, dispatchOnly,
+		launchOriginManual, options,
+	)
+}

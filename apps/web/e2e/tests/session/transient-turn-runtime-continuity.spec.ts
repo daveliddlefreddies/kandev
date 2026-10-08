@@ -5,7 +5,7 @@ import {
   assertRetainedACPTrace,
   assertRetainedFailureMessage,
   createRetainedCapacityFixture,
-  expectContinuationHistory,
+  expectCompletedCapacityProgress,
   readMockACPTrace,
   waitForRetainedTurnFailure,
 } from "../../helpers/transient-turn-runtime-continuity";
@@ -210,18 +210,18 @@ test("desktop: completed tools continue once on the same runtime across reload a
     const session = new SessionPage(testPage);
     await testPage.goto(`/t/${fixture.taskId}`);
     await session.waitForLoad();
-    await expectContinuationHistory(session, { timeout: 30_000 });
+    await expectCompletedCapacityProgress(session);
     const executionId = await waitForExecutionId(apiClient, fixture.taskId, fixture.sessionId);
 
     await testPage.reload();
     await session.waitForLoad();
-    await expectContinuationHistory(session);
+    await expectCompletedCapacityProgress(session);
     const viewer = await testPage.context().newPage();
     try {
       await viewer.goto(`/t/${fixture.taskId}`);
       const otherViewer = new SessionPage(viewer);
       await otherViewer.waitForLoad();
-      await expectContinuationHistory(otherViewer);
+      await expectCompletedCapacityProgress(otherViewer);
     } finally {
       await viewer.close();
     }

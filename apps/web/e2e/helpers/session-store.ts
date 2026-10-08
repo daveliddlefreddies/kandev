@@ -4,7 +4,12 @@ type E2EStoreWindow = Window & {
   __KANDEV_E2E_STORE__?: {
     getState: () => {
       taskSessions: { items: Record<string, Record<string, unknown>> };
+      taskSessionsByTask: {
+        loadingByTaskId: Record<string, boolean | undefined>;
+        loadedByTaskId: Record<string, boolean | undefined>;
+      };
       tasks: { activeTaskId: string | null; activeSessionId: string | null };
+      connection: { status: string };
       quickChat: { activeSessionId: string | null };
       sessionModels: {
         bySessionId: Record<string, SessionModelsData | undefined>;
@@ -161,6 +166,42 @@ export async function waitForActiveSessionForegroundActivity(
       timeout: timeoutMs,
       message: `Session ${targetSessionId ?? "active"} did not reach foreground activity ${activity}`,
     },
+  );
+}
+
+/** Wait until the connected task page has no session-list hydration in flight. */
+export async function waitForTaskSessionsSettled(page: Page, taskId: string): Promise<void> {
+  await page.waitForFunction(
+    (targetTaskId) => {
+      const state = (window as E2EStoreWindow).__KANDEV_E2E_STORE__?.getState();
+      return Boolean(
+        state &&
+        state.connection.status === "connected" &&
+        state.taskSessionsByTask.loadedByTaskId[targetTaskId] === true &&
+        state.taskSessionsByTask.loadingByTaskId[targetTaskId] !== true,
+      );
+    },
+    taskId,
+    { timeout: 20_000, message: `Sessions for task ${taskId} did not settle after reconnect` },
+  );
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await page.waitForFunction(
+    (targetTaskId) => {
+      const state = (window as E2EStoreWindow).__KANDEV_E2E_STORE__?.getState();
+      return Boolean(
+        state &&
+        state.connection.status === "connected" &&
+        state.taskSessionsByTask.loadedByTaskId[targetTaskId] === true &&
+        state.taskSessionsByTask.loadingByTaskId[targetTaskId] !== true,
+      );
+    },
+    taskId,
+    { timeout: 20_000, message: `Sessions for task ${taskId} did not remain settled` },
   );
 }
 

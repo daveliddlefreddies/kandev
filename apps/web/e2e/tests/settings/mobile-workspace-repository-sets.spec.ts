@@ -203,6 +203,7 @@ test.describe("Mobile workspace repository sets", () => {
     expect(refreshButtonBox!.height).toBeGreaterThanOrEqual(44);
     expect(refreshButtonBox!.width).toBeGreaterThanOrEqual(44);
     await waitForFiniteAnimations(dropdown);
+    await refreshButton.scrollIntoViewIfNeeded();
     const refreshReceivesCenterTap = await refreshButton.evaluate((element) => {
       const rect = element.getBoundingClientRect();
       const target = document.elementFromPoint(

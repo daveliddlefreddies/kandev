@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Locator } from "@playwright/test";
 import { expect, resetSeedRepositoryCheckout, test } from "../../fixtures/test-base";
+import { waitForHttp } from "../../helpers/causal-waits";
 import { makeGitEnv } from "../../helpers/git-helper";
 import { useRegularMode } from "../../helpers/regular-mode";
 import { KanbanPage } from "../../pages/kanban-page";
@@ -391,7 +392,27 @@ test.describe("MCP subtask creation", () => {
     apiClient,
     seedData,
   }) => {
-    const subtaskTitle = "MCP-subtask-e2e-verify";
+    const subtaskTitle = `MCP-subtask-e2e-verify-${Date.now()}`;
+    const settingsBefore = await apiClient.getUserSettings();
+    const baselineLayout =
+      settingsBefore.settings.sidebar_layouts_by_workspace?.[seedData.workspaceId];
+    await apiClient.saveUserSettings({
+      sidebar_layout_state: {
+        workspace_id: seedData.workspaceId,
+        expected_revision: baselineLayout?.revision ?? 0,
+        layout: {
+          version: 1,
+          revision: 0,
+          navigation_height: 0,
+          navigation_expanded: false,
+          nodes: [
+            { id: "home", kind: "builtin", destination_id: "home", visible: true },
+            { id: "new-task", kind: "builtin", destination_id: "new_task", visible: true },
+            { id: "integrations", kind: "builtin", destination_id: "integrations", visible: true },
+          ],
+        },
+      },
+    });
 
     const script = [
       'e2e:thinking("Planning subtasks...")',
@@ -401,74 +422,79 @@ test.describe("MCP subtask creation", () => {
       'e2e:message("Done.")',
     ].join("\n");
 
-    // 1. Create parent task via UI dialog
     const kanban = new KanbanPage(testPage);
-    await kanban.goto();
-
-    await kanban.createTaskButton.first().click();
-    const dialog = testPage.getByTestId("create-task-dialog");
-    await expect(dialog).toBeVisible();
-
-    await testPage.getByTestId("task-title-input").fill("MCP Subtask Parent");
-    await testPage.getByTestId("task-description-input").fill(script);
-
-    const startBtn = testPage.getByTestId(START_AGENT_TEST_ID);
-    await expect(startBtn).toBeEnabled({ timeout: START_ENABLED_TIMEOUT });
-    await startBtn.click();
-    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
-
-    // 2. Sidebar task creation navigates directly to the parent session.
-    await expect(testPage).toHaveURL(/\/t\//, { timeout: 15_000 });
-
-    // 3. Wait for the agent to complete — the MCP create_task call happens during execution
-    const session = new SessionPage(testPage);
-    await session.waitForLoad();
-    await expect(session.idleInput()).toBeVisible({ timeout: 30_000 });
-
-    const parentTaskId = new URL(testPage.url()).pathname.match(/\/t\/([^/]+)$/)?.[1];
-    if (!parentTaskId) throw new Error("Parent task ID missing from the session URL");
-
-    let subtaskId: string | undefined;
-    await expect
-      .poll(
-        async () => {
-          const { tasks } = await apiClient.listTasks(seedData.workspaceId);
-          subtaskId = tasks.find((task) => task.title === subtaskTitle)?.id;
-          return subtaskId;
-        },
-        { timeout: 30_000, message: "Waiting for the agent-created subtask" },
-      )
-      .toBeTruthy();
-    const subtask = await apiClient.getTask(subtaskId!);
-    expect(subtask.parent_id).toBe(parentTaskId);
-
-    const settings = (await apiClient.getUserSettings()).settings;
-    const originalWorkflowFilter =
-      typeof settings.workflow_filter_id === "string" ? settings.workflow_filter_id : "";
-    const originalWorkspaceId =
-      typeof settings.workspace_id === "string" ? settings.workspace_id : seedData.workspaceId;
-    const originalRepositoryIds = Array.isArray(settings.repository_ids)
-      ? settings.repository_ids.filter((id): id is string => typeof id === "string")
-      : [];
-
     try {
-      // Pin the create-dialog workflow in both settings and navigation so a
-      // previous board selection cannot hide the agent-created subtask.
-      await apiClient.saveUserSettings({
-        workspace_id: seedData.workspaceId,
-        workflow_filter_id: subtask.workflow_id,
-        repository_ids: [],
-      });
-      await kanban.goto(subtask.workflow_id);
+      await kanban.goto();
 
-      const subtaskCard = kanban.taskCardByTitle(subtaskTitle);
-      await expect(subtaskCard).toBeVisible({ timeout: 10_000 });
-      await expect(subtaskCard.getByText("MCP Subtask Parent")).toBeVisible();
+      await expect(testPage.getByTestId("sidebar-navigation-split")).toBeVisible();
+      const navigationExpand = testPage.getByTestId("sidebar-navigation-expand");
+      await expect(navigationExpand).toHaveAttribute("aria-expanded", "false");
+      const layoutSaved = waitForHttp(testPage, "PATCH", /\/api\/v1\/user\/settings$/);
+      await navigationExpand.click();
+      expect((await layoutSaved).ok()).toBeTruthy();
+      await expect(navigationExpand).toHaveAttribute("aria-expanded", "true");
+
+      // 1. Create parent task via UI dialog
+      await kanban.createTaskButton.first().click();
+      const dialog = testPage.getByTestId("create-task-dialog");
+      await expect(dialog).toBeVisible();
+
+      await testPage.getByTestId("task-title-input").fill("MCP Subtask Parent");
+      await testPage.getByTestId("task-description-input").fill(script);
+
+      const startBtn = testPage.getByTestId(START_AGENT_TEST_ID);
+      await expect(startBtn).toBeEnabled({ timeout: START_ENABLED_TIMEOUT });
+      await startBtn.click();
+      await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+
+      // 2. Sidebar task creation navigates directly to the parent session.
+      await expect(testPage).toHaveURL(/\/t\//, { timeout: 15_000 });
+      const parentTaskId = new URL(testPage.url()).pathname.match(/^\/t\/([^/]+)/)?.[1];
+      expect(parentTaskId).toBeTruthy();
+
+      // 3. Wait for the agent to complete — the MCP create_task call happens during execution
+      const session = new SessionPage(testPage);
+      await session.waitForLoad();
+      await expect(session.idleInput()).toBeVisible({ timeout: 30_000 });
+
+      // 4. Confirm the created task is related to its parent and visible in the
+      // sidebar hierarchy, which is independent of the current Kanban workflow filter.
+      await expect
+        .poll(async () => {
+          const { tasks } = await apiClient.listTasks(seedData.workspaceId);
+          return tasks.find((task) => task.title === subtaskTitle)?.id ?? null;
+        })
+        .not.toBeNull();
+      const { tasks } = await apiClient.listTasks(seedData.workspaceId);
+      const child = tasks.find((task) => task.title === subtaskTitle);
+      expect(child).toBeDefined();
+      const childDetails = await apiClient.getTask(child!.id);
+      expect(childDetails.parent_id).toBe(parentTaskId);
+
+      const sidebar = testPage.getByTestId("task-sidebar");
+      const parentRow = sidebar.locator(
+        `[data-testid="sidebar-task-item"][data-task-row-id="${parentTaskId}"]`,
+      );
+      await expect(parentRow).toBeVisible();
+      const subtaskToggle = parentRow.getByTestId("sidebar-subtask-toggle");
+      if ((await subtaskToggle.getAttribute("aria-expanded")) !== "true") {
+        await subtaskToggle.click();
+      }
+      await expect(subtaskToggle).toHaveAttribute("aria-expanded", "true");
+      const childRow = sidebar.locator(
+        `[data-testid="sidebar-task-item"][data-task-row-id="${child!.id}"]`,
+      );
+      await expect(childRow).toBeVisible({ timeout: 10_000 });
+      await expect(childRow).toContainText(subtaskTitle);
     } finally {
+      const currentLayout = (await apiClient.getUserSettings()).settings
+        .sidebar_layouts_by_workspace?.[seedData.workspaceId];
       await apiClient.saveUserSettings({
-        workspace_id: originalWorkspaceId,
-        workflow_filter_id: originalWorkflowFilter,
-        repository_ids: originalRepositoryIds,
+        sidebar_layout_state: {
+          workspace_id: seedData.workspaceId,
+          expected_revision: currentLayout?.revision ?? 0,
+          layout: baselineLayout ?? null,
+        },
       });
     }
   });

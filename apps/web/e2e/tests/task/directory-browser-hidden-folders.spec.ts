@@ -52,8 +52,16 @@ async function openFolderSourceDialog(page: Page, taskId: string) {
   await page.goto(`/t/${taskId}`);
   const session = new SessionPage(page);
   await session.waitForLoad();
-  await session.clickTab("Files");
-  await page.getByTestId("files-workspace-actions").click();
+  await session.waitForDockviewReady();
+  const filesTab = page.locator(".dv-tab:visible", {
+    has: page.locator(".dv-default-tab-content").filter({ hasText: /^Files$/ }),
+  });
+  await expect(filesTab).toBeVisible();
+  await filesTab.click();
+  await expect(session.files).toBeVisible();
+  const workspaceActions = page.getByTestId("files-workspace-actions");
+  await expect(workspaceActions).toBeVisible();
+  await workspaceActions.click();
   await page.getByRole("menuitem", { name: "Add Repositories to workspace" }).click();
   const dialog = page.getByTestId("add-workspace-sources-dialog");
   await expect(dialog).toBeVisible();

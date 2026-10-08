@@ -103,6 +103,7 @@ func (o *savedPromptDeliveryOrchestrator) PromptTaskWithDeliverySubmissionID(
 	attachments []v1.MessageAttachment,
 	dispatchOnly bool,
 	submissionID string,
+	accepted ...orchestrator.DirectPromptStartOptions,
 ) (*orchestrator.PromptResult, error) {
 	o.deliverySubmissionID = submissionID
 	return o.PromptTask(ctx, taskID, sessionID, content, model, planMode, attachments, dispatchOnly)
@@ -457,4 +458,24 @@ func TestWSAddMessage_PassesTrustedPromptContextToCreatedSessionStart(t *testing
 		require.Equal(t, repo.messages[0].Content, started.prompt)
 		require.Equal(t, savedPromptTrustedContext, started.promptReferenceContext)
 	})
+}
+
+func (o *readySessionPromptCapture) PromptTaskWithDeliverySubmissionID(
+	_ context.Context,
+	_, _, prompt, model string,
+	planMode bool,
+	attachments []v1.MessageAttachment,
+	dispatchOnly bool,
+	submissionID string,
+	accepted ...orchestrator.DirectPromptStartOptions,
+) (*orchestrator.PromptResult, error) {
+	options := orchestrator.DirectPromptStartOptions{}
+	if len(accepted) > 0 {
+		options = accepted[0]
+	}
+	return o.promptTaskWithPromptContext(
+		prompt, model, planMode, attachments, options.PromptReferenceContext,
+		options.PromptReferencesPrepared, options.References, dispatchOnly,
+		options.InitialTaskBriefDispatchOwner, submissionID,
+	)
 }
