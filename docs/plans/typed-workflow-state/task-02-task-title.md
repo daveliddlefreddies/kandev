@@ -17,6 +17,7 @@ acceptance_criteria:
   - AC-TWS-006.6
   - AC-TWS-006.7
   - AC-TWS-006.8
+  - AC-TWS-006.9
 system_design:
   - ../../specs/typed-workflow-state/system-design/typed-workflow-state.md
 ---
@@ -33,6 +34,7 @@ after every other placeholder so its text is never scanned for tokens.
 
 - `apps/backend/internal/orchestrator/task_title_prompt.go`
 - `apps/backend/internal/orchestrator/task_title_prompt_test.go`
+- `apps/backend/internal/orchestrator/task_title_prompt_paths_test.go`
 - `apps/backend/internal/orchestrator/task_operations.go`
 - `docs/public/workflow-tips.md`
 
@@ -48,6 +50,7 @@ after every other placeholder so its text is never scanned for tokens.
   title is swapped in after `{task_id}` and `{{task_prompt}}` substitution; on
   the workflow-level path the title is substituted last. Title text is
   therefore never expanded (AC-TWS-006.7), and the other placeholders keep
-  their behaviour (AC-TWS-006.8).
+  their behaviour (AC-TWS-006.8). Saved-prompt references in the title expand
+  as they do in the base prompt (AC-TWS-006.9).
 - `go test ./apps/backend/internal/orchestrator/...` green. `gofmt`, `go vet`,
   and `golangci-lint` clean.

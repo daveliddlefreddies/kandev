@@ -54,6 +54,10 @@ substitutes it.
 - **AC-TWS-006.8:** `{task_id}`, `{step_entry_number}` and `{{task_prompt}}`
   substitution shall be byte-for-byte unchanged, including the replacement of
   only the first `{{task_prompt}}` occurrence.
+- **AC-TWS-006.9:** Saved-prompt references (`@name`) in the title shall be
+  treated exactly as they are in the base prompt: the substituted title is part
+  of the prompt handed to saved-prompt expansion, which runs once over the
+  assembled prompt.
 
 ## Verification
 
@@ -74,3 +78,11 @@ One line per case; the cited AC is authoritative for the expected value.
    stays literal (006.8).
 9. The existing `{step_entry_number}` and workflow prompt tests pass unchanged
    (006.8).
+10. A direct message appended to a step prompt receives no substitution, and
+    `skip_step_prompt` still substitutes the workflow-level block (006.2, 006.6).
+11. Workflow entry renders the title (006.1, 006.2).
+12. A title containing the workflow-instructions end marker cannot close the
+    workflow block early (006.7).
+13. An empty title substitutes as an empty string without a warning (006.1).
+14. `@` references in the title reach saved-prompt expansion together with the
+    base prompt (006.9).
