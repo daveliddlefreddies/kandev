@@ -30,22 +30,23 @@ import (
 
 type cursorCloudAgentManager struct {
 	*lifecycleAdapter
-	repo                            *sqliterepo.Repository
-	taskService                     *taskservice.Service
-	github                          *github.Service
-	secrets                         secrets.SecretStore
-	runtime                         *runtime.Router
-	managedRuntime                  *cursorcloudruntime.Runtime
-	enabled                         func() bool
-	turnMu                          sync.Mutex
-	pendingTurns                    map[string]string
-	observerMu                      sync.Mutex
-	observerCtx                     context.Context
-	observerCancel                  context.CancelFunc
-	observerCancels                 map[string]context.CancelFunc
-	observerStopping                bool
-	observerWG                      sync.WaitGroup
-	localPromptWithDispatchCallback func(context.Context, string, string, []v1.MessageAttachment, bool, func()) (*executor.PromptResult, error)
+	repo                             *sqliterepo.Repository
+	taskService                      *taskservice.Service
+	github                           *github.Service
+	secrets                          secrets.SecretStore
+	runtime                          *runtime.Router
+	managedRuntime                   *cursorcloudruntime.Runtime
+	enabled                          func() bool
+	turnMu                           sync.Mutex
+	pendingTurns                     map[string]string
+	observerMu                       sync.Mutex
+	observerCtx                      context.Context
+	observerCancel                   context.CancelFunc
+	observerCancels                  map[string]context.CancelFunc
+	observerStopping                 bool
+	observerWG                       sync.WaitGroup
+	localPromptWithDispatchCallback  func(context.Context, string, string, []v1.MessageAttachment, bool, func()) (*executor.PromptResult, error)
+	localPromptWithAdmissionCallback func(context.Context, string, string, []v1.MessageAttachment, bool, func() error, func()) (*executor.PromptResult, error)
 }
 
 const (
@@ -78,8 +79,9 @@ func newCursorCloudAgentManager(
 	return &cursorCloudAgentManager{
 		lifecycleAdapter: base, repo: repo, taskService: taskSvc, github: githubSvc,
 		secrets: secretStore, runtime: router, managedRuntime: managedRuntime, enabled: enabled,
-		localPromptWithDispatchCallback: base.PromptAgentWithDispatchCallback,
-		pendingTurns:                    make(map[string]string),
+		localPromptWithDispatchCallback:  base.PromptAgentWithDispatchCallback,
+		localPromptWithAdmissionCallback: base.PromptAgentWithAdmissionCallback,
+		pendingTurns:                     make(map[string]string),
 	}, nil
 }
 
@@ -212,36 +214,85 @@ func (m *cursorCloudAgentManager) PromptAgentWithDispatchCallback(ctx context.Co
 	return m.promptCloud(ctx, executionID, prompt, attachments, dispatchOnly, onDispatched)
 }
 
+func (m *cursorCloudAgentManager) PromptAgentWithAdmissionCallback(
+	ctx context.Context,
+	executionID, prompt string,
+	attachments []v1.MessageAttachment,
+	dispatchOnly bool,
+	beforeAdmission func() error,
+	onDispatched func(),
+) (*executor.PromptResult, error) {
+	return m.promptCloudWithAdmissionCallback(
+		ctx, executionID, prompt, attachments, dispatchOnly, beforeAdmission, onDispatched,
+	)
+}
+
 func (m *cursorCloudAgentManager) promptCloud(ctx context.Context, executionID, prompt string, attachments []v1.MessageAttachment, dispatchOnly bool, onDispatched func()) (*executor.PromptResult, error) {
+	return m.promptCloudWithAdmissionCallback(ctx, executionID, prompt, attachments, dispatchOnly, nil, onDispatched)
+}
+
+func (m *cursorCloudAgentManager) promptCloudWithAdmissionCallback(
+	ctx context.Context,
+	executionID, prompt string,
+	attachments []v1.MessageAttachment,
+	dispatchOnly bool,
+	beforeAdmission func() error,
+	onDispatched func(),
+) (*executor.PromptResult, error) {
 	binding, err := m.repo.GetManagedAgentBindingByExecution(ctx, executionID)
 	if errors.Is(err, repository.ErrManagedAgentBindingNotFound) {
-		if m.localPromptWithDispatchCallback != nil {
-			return m.localPromptWithDispatchCallback(ctx, executionID, prompt, attachments, dispatchOnly, onDispatched)
-		}
-		return m.lifecycleAdapter.PromptAgentWithDispatchCallback(ctx, executionID, prompt, attachments, dispatchOnly, onDispatched)
+		return m.promptLocalWithAdmissionCallback(
+			ctx, executionID, prompt, attachments, dispatchOnly, beforeAdmission, onDispatched,
+		)
 	}
 	if err != nil {
 		return nil, err
 	}
-	if !m.enabled() {
-		return nil, errors.New("cursor cloud is disabled for new dispatches")
+	return m.promptManagedWithAdmissionCallback(
+		ctx, binding, prompt, attachments, dispatchOnly, beforeAdmission, onDispatched,
+	)
+}
+
+func (m *cursorCloudAgentManager) promptLocalWithAdmissionCallback(
+	ctx context.Context,
+	executionID, prompt string,
+	attachments []v1.MessageAttachment,
+	dispatchOnly bool,
+	beforeAdmission func() error,
+	onDispatched func(),
+) (*executor.PromptResult, error) {
+	if beforeAdmission != nil {
+		if m.localPromptWithAdmissionCallback != nil {
+			return m.localPromptWithAdmissionCallback(ctx, executionID, prompt, attachments, dispatchOnly, beforeAdmission, onDispatched)
+		}
+		return m.lifecycleAdapter.PromptAgentWithAdmissionCallback(
+			ctx, executionID, prompt, attachments, dispatchOnly, beforeAdmission, onDispatched,
+		)
 	}
-	if len(attachments) != 0 {
-		return nil, errors.New("cursor cloud does not support prompt attachments")
+	if m.localPromptWithDispatchCallback != nil {
+		return m.localPromptWithDispatchCallback(ctx, executionID, prompt, attachments, dispatchOnly, onDispatched)
 	}
-	task, err := m.repo.GetTask(ctx, binding.TaskID)
-	if err != nil || task == nil {
-		return nil, errors.New("cursor cloud task is unavailable")
+	return m.lifecycleAdapter.PromptAgentWithDispatchCallback(ctx, executionID, prompt, attachments, dispatchOnly, onDispatched)
+}
+
+func (m *cursorCloudAgentManager) promptManagedWithAdmissionCallback(
+	ctx context.Context,
+	binding *models.ManagedAgentBinding,
+	prompt string,
+	attachments []v1.MessageAttachment,
+	dispatchOnly bool,
+	beforeAdmission func() error,
+	onDispatched func(),
+) (*executor.PromptResult, error) {
+	if err := m.validateManagedCloudPrompt(ctx, binding, attachments); err != nil {
+		return nil, err
 	}
-	if task.ArchivedAt != nil {
-		return nil, errors.New("cursor cloud cannot accept a message for an archived task")
-	}
-	if binding.Lifecycle == models.ManagedAgentBindingArchived || binding.Lifecycle == models.ManagedAgentBindingTerminationPending {
-		if err := m.repo.ResolveManagedAgentTermination(ctx, binding.ID, models.ManagedAgentBindingReady, time.Now().UTC()); err != nil {
-			return nil, fmt.Errorf("resolve Cursor Cloud termination before follow-up: %w", err)
+	if beforeAdmission != nil {
+		if err := beforeAdmission(); err != nil {
+			return nil, err
 		}
 	}
-	turnID := m.takePromptTurnID(executionID)
+	turnID := m.takePromptTurnID(binding.ExecutionID)
 	if err := m.runtime.ResumeWithTurnID(ctx, binding.ExecutionID, turnID, prompt); err != nil {
 		return nil, err
 	}
@@ -250,6 +301,32 @@ func (m *cursorCloudAgentManager) promptCloud(ctx context.Context, executionID, 
 		onDispatched()
 	}
 	return &executor.PromptResult{StopReason: "accepted"}, nil
+}
+
+func (m *cursorCloudAgentManager) validateManagedCloudPrompt(
+	ctx context.Context,
+	binding *models.ManagedAgentBinding,
+	attachments []v1.MessageAttachment,
+) error {
+	if !m.enabled() {
+		return errors.New("cursor cloud is disabled for new dispatches")
+	}
+	if len(attachments) != 0 {
+		return errors.New("cursor cloud does not support prompt attachments")
+	}
+	task, err := m.repo.GetTask(ctx, binding.TaskID)
+	if err != nil || task == nil {
+		return errors.New("cursor cloud task is unavailable")
+	}
+	if task.ArchivedAt != nil {
+		return errors.New("cursor cloud cannot accept a message for an archived task")
+	}
+	if binding.Lifecycle == models.ManagedAgentBindingArchived || binding.Lifecycle == models.ManagedAgentBindingTerminationPending {
+		if err := m.repo.ResolveManagedAgentTermination(ctx, binding.ID, models.ManagedAgentBindingReady, time.Now().UTC()); err != nil {
+			return fmt.Errorf("resolve Cursor Cloud termination before follow-up: %w", err)
+		}
+	}
+	return nil
 }
 
 func (m *cursorCloudAgentManager) SetPromptTurnID(ctx context.Context, executionID, turnID string) error {

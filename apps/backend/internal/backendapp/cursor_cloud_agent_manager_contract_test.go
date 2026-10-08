@@ -166,6 +166,46 @@ func TestCursorCloudLocalPromptFallbackPreservesDispatchCallback(t *testing.T) {
 	}
 }
 
+func TestCursorCloudAdmissionCallbackUsesLocalPromptFallback(t *testing.T) {
+	repo, _, _ := seedCursorCloudCompatibilityBinding(t)
+	beforeAdmitted := false
+	dispatched := false
+	manager := &cursorCloudAgentManager{
+		repo: repo,
+		localPromptWithAdmissionCallback: func(
+			_ context.Context,
+			executionID, prompt string,
+			_ []v1.MessageAttachment,
+			dispatchOnly bool,
+			beforeAdmission func() error,
+			onDispatched func(),
+		) (*executor.PromptResult, error) {
+			if executionID != "local-execution" || prompt != "local follow-up" || !dispatchOnly {
+				t.Fatalf("local admission prompt = execution %q prompt %q dispatch-only %t", executionID, prompt, dispatchOnly)
+			}
+			if err := beforeAdmission(); err != nil {
+				return nil, err
+			}
+			beforeAdmitted = true
+			onDispatched()
+			return &executor.PromptResult{AgentMessage: "local result"}, nil
+		},
+	}
+	result, err := manager.PromptAgentWithAdmissionCallback(
+		context.Background(), "local-execution", "local follow-up", nil, true,
+		func() error { return nil }, func() { dispatched = true },
+	)
+	if err != nil {
+		t.Fatalf("local admission prompt fallback: %v", err)
+	}
+	if !beforeAdmitted || !dispatched {
+		t.Fatalf("admission callback called = %t, dispatched callback called = %t", beforeAdmitted, dispatched)
+	}
+	if result == nil || result.AgentMessage != "local result" {
+		t.Fatalf("local admission result = %#v, want local result", result)
+	}
+}
+
 func TestCursorCloudLocalStopFallbackPreservesReasonAndForce(t *testing.T) {
 	repo, _, _ := seedCursorCloudCompatibilityBinding(t)
 	log := newTestLogger()
