@@ -151,7 +151,9 @@ resolution and forwarding are unchanged.
 
 Targeted process, registered HTTP and client suites passed with Go1.26,
 `-trimpath -tags=fts5 -race -p=1 -count=1`, GOMAXPROCS=2 and GOMEMLIMIT=512MiB.
-Scoped lint passed with zero issues; documentation/coverage validation follows. Owned execution
+Scoped lint passed with zero issues. Documentation catalog, specification lint,
+actual changed-file documentation coverage and whitespace checks passed before
+the normal active hooks, commit, push and ready PR. Owned execution
 receipts and raw logs are under `/tmp/kandev-child82-execution-20261008/`:
 
 | Command | Original handle / start / actual join | Actual exit | Fresh group |
@@ -189,10 +191,17 @@ delivery constraints are persisted version-safely in this task's Kandev plan,
 including the `<kandev-system>` marker; task title and user edits remain owned
 by their existing authors.
 
-Task 01 implementation is complete. Delivery continues in this same primary:
-normal active hooks/commit/push and ready PR, then explicit joined-heavy RETURN
-before the single hosted observer. ROOT retains serial merge ownership; no
-merge is authorized. Live delivery receipts and exact next action belong in the
-versioned task plan, preserving task/session identity, system marker, user edits
-and protected proof. No operator/model question, ACK loop, sibling contact, or
-new task/session.
+Task 01 implementation and initial local delivery are complete. Normal active
+hooks passed, the implementation was committed and pushed, and ready
+[PR #4338](https://github.com/kdlbs/kandev/pull/4338) was opened. All twelve
+original local commands joined with actual terminal verdicts and absent groups
+before the explicit local-heavy RETURN and the single hosted observer.
+
+ROOT authorized a documentation-only correction for duplicate stale handoff
+findings while that original observer remained live. No production or tests
+changed. Current-head CI/review qualification, finding dispositions, delivery
+receipts and the exact next action belong in the versioned task plan, preserving
+task/session identity, system marker, user edits and protected proof. ROOT
+retains the separate serial merge gate; terminal hosted CI and merge are not
+claimed here. No operator/model question, ACK loop, sibling contact, or new
+task/session.

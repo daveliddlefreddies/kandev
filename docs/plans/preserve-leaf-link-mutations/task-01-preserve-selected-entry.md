@@ -155,9 +155,19 @@ Linux receipts do not establish Windows native execution.
 
 ROOT concretely reviewed all four artifacts, then released test authoring and
 full implementation with exclusive GLOBAL LOCAL-HEAVY82. Permanent causal RED
-ran before production edits. All three targeted race suites now pass; receipts,
-original handles, actual exits, fresh groups and UTC boundaries are recorded in
-the [manifest](plan.md) and task plan. Scoped lint passed with zero issues. Final documentation/coverage checks
-precede delivery. No commit, push or PR has occurred yet. Next action: use normal
-active hooks for a new commit, push and open ready PR,
-return the heavy lease, then run the single authorized hosted observer.
+ran before production edits. The three targeted race suites, scoped lint,
+documentation catalog, specification lint, actual changed-file documentation
+coverage and whitespace checks passed. Normal active hooks passed, the
+implementation was committed and pushed, and ready
+[PR #4338](https://github.com/kdlbs/kandev/pull/4338) was opened. The local-heavy
+lease was returned after every original local command joined with its actual
+terminal verdict and absent process group; historical receipts and UTC
+boundaries remain in the [manifest](plan.md) and task plan.
+
+ROOT authorized a documentation-only correction for the duplicate delivery
+handoff findings while the original hosted collector remained live. Production,
+tests and their passing verification are unchanged. Live delivery status,
+current-head CI/review evidence, finding dispositions and the exact next action
+belong in this task's versioned Kandev plan. That plan owns continuation of the
+single original collector and ROOT's separate serial merge gate; this work order
+does not claim terminal hosted CI or a merge.
