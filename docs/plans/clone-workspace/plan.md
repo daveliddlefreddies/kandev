@@ -231,3 +231,18 @@ Implemented and verified: 33 targeted unit tests, scoped lint, TypeScript and
 complete localization gates passed. Fresh managed desktop 3/3 and phone 3/3
 browser tests passed, including wide-card proximity and page-header cloning.
 Task 04 records exact results.
+
+### PR review admission coverage
+
+Task 02 adds 13 rejection cases and a positive control for all four workspace
+defaults. The targeted service clone tests passed with the race detector; an
+admission-bypass overlay failed all 13 cases, proving the regression boundary.
+Production contracts and rendered UI are unchanged. Task 02 records the exact
+command, results and non-code review dispositions.
+
+
+The PostgreSQL CI clone fixture failed on its pre-storage timestamp version.
+A local PostgreSQL 16 reproduction failed identically; reloading the source
+through the repository before cloning fixed the fixture. All eight coordinator
+clone tests then passed three race-enabled repetitions with PostgreSQL enabled.
+The production stale-source guard remains the owning concurrency contract.

@@ -74,6 +74,8 @@ Run from the repository root. PostgreSQL integration cases follow the existing
 
 ```bash
 (cd apps/backend && go test ./internal/task/service ./internal/task/handlers ./internal/backendapp ./internal/github ./internal/secrets -run 'TestWorkspaceClone|TestCopyWorkspace|TestService_CreateWorkspace|TestCreateWorkspace|TestCopySecret' -count=1)
+(cd apps/backend && go test -trimpath -race -p=1 ./internal/task/service -run TestWorkspaceClone -count=1)
+(cd apps/backend && go test -trimpath -race -p=1 ./internal/backendapp -run '^TestWorkspaceClone' -count=3)
 (cd apps/backend && go test ./internal/db/sqlguard/... -count=1)
 (cd apps/backend && go run ./cmd/sqlguard ./internal)
 (cd apps/backend && go test -race ./internal/persistence/storeconformance -count=1)
@@ -86,6 +88,7 @@ context; a fake transaction callback alone does not establish atomicity.
 ## Files likely touched
 
 - `apps/backend/internal/task/service/service_workspace_clone.go` and `_test.go` (new).
+- `apps/backend/internal/task/service/service_workspace_clone_defaults_test.go` (new).
 - `apps/backend/internal/task/service/service.go`, `service_resources.go`,
   `service_unit_placement.go`, and `service_members.go` as needed for shared admission.
 - `apps/backend/internal/task/handlers/workspace_handlers.go`.
@@ -122,10 +125,37 @@ the secret owner, and no transport field accepts a source ownership claim.
 
 ## Results
 
-Atomic creation, seven persistence failure points, admission/authorization, event ordering, GitHub source matrix, encrypted nonce isolation and PAT disconnect independence tests passed. HTTP 201/name validation tests passed. SQL guard command and tests passed; race storeconformance passed. PostgreSQL atomic fixture added; skipped locally because KANDEV_TEST_POSTGRES_DSN is unset.
+Atomic creation, seven persistence failure points, admission/authorization, event ordering, GitHub source matrix, encrypted nonce isolation and PAT disconnect independence tests passed. HTTP 201/name validation tests passed. SQL guard command and tests passed; race storeconformance passed. The original local check skipped the PostgreSQL atomic fixture because KANDEV_TEST_POSTGRES_DSN was unset; real PostgreSQL fixup results follow below.
 
 Final targeted backend run passed across eight packages after adding review-action
 profile admission: unavailable reviewer profiles roll back the clone, while
 eligible shared reviewer profiles retain their action configuration. Cancellation,
 empty-workflow bootstrap, stale source and authenticated HTTP ownership tests pass.
 Scoped Go lint reports zero issues.
+
+PR review coverage: `TestWorkspaceCloneRejectsUnavailableDefaults` adds 13
+service-boundary cases for missing/deleted/disabled executor defaults,
+missing/deleted environment defaults, and missing/deleted/disabled/source-scoped
+profiles for both ordinary and config agents. Every rejection leaves the
+persistence participant uncalled, workspace count unchanged and events empty.
+The same fixture's positive control preserves all four eligible defaults and
+reaches persistence/publication. The race-enabled command above passed (1.530s).
+A temporary Go overlay bypassing admission made all 13 rejection cases fail with
+the expected missing configuration error; no production file was changed.
+
+Existing environment reads already filter soft-deleted rows, and GitHub service
+initialization retains its store when authentication is absent. Owner-specific
+fresh timestamps do not weaken transaction atomicity. These dispositions do
+not change the documented behavior or contract, so requirements/design and
+public documentation need no amendment.
+
+
+The current-head Backend Postgres job (run 37707946725, job 113090745544)
+failed `TestWorkspaceClonePostgresAtomicCreation` with `task resource version
+changed`. The same assertion failed locally on an isolated PostgreSQL 16
+instance (1.363s). The fixture supplied its pre-storage creation object;
+PostgreSQL stores microsecond precision, while clone admission compares the
+persisted workspace version. Reloading the source through `GetWorkspace`, as
+the service does, fixes the fixture without weakening the version check.
+The second command above passed three repetitions of all eight coordinator
+clone tests with the race detector and PostgreSQL enabled (17.406s).

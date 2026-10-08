@@ -27,6 +27,9 @@ func TestWorkspaceClonePostgresAtomicCreation(t *testing.T) {
 	source := &models.Workspace{Name: "Source"}
 	_, err = taskStore.CreateWorkspaceWithKanban(t.Context(), source)
 	require.NoError(t, err)
+	// Clone admission uses the persisted workspace version.
+	source, err = taskStore.GetWorkspace(t.Context(), source.ID)
+	require.NoError(t, err)
 	require.NoError(t, gh.UpsertWorkspaceSettings(t.Context(), &github.WorkspaceSettings{WorkspaceID: source.ID, RepoScopeMode: github.RepoScopeModeAll, SavedPresets: []byte(`[{"id":"mine"}]`)}))
 	target := &models.Workspace{Name: "Copy"}
 	copied, err := cloner.CloneWorkspace(t.Context(), source, target)
