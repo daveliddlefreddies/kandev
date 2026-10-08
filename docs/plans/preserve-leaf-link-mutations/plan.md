@@ -64,8 +64,9 @@ Follow the [owning design](../../specs/workspaces/system-design/file-entry-mutat
 Keep target resolution unchanged. Add a local entry resolver retaining canonical
 parent admission and an authority-root handle; keep full-target source admission
 and root protection before returning the preserved leaf path. Delete classifies
-the leaf with rooted Lstat; Rename validates occupied destinations with rooted
-Lstat and moves with rooted Rename. Do not change HTTP/WS/frontend forwarding.
+the leaf with rooted Lstat; Rename validates source entry existence after the
+barrier and occupied destinations with rooted Lstat, then moves with rooted
+Rename. Canonical target admission retains Stat. Do not change HTTP/WS/frontend forwarding.
 
 | Operation boundary | Identity and behavior | Evidence | Unsupported outcome |
 | --- | --- | --- | --- |
@@ -81,6 +82,8 @@ New process file `workspace_file_entry_mutations_test.go`:
 
 - `TestWorkspaceFileEntryMutations_LeafIdentity`: AC 001.1/001.2/001.6, actual
   tree link metadata, file/directory delete/rename/move, link value and all bytes.
+- `TestWorkspaceFileEntryMutations_AbsoluteLeafIdentity`: absolute contained
+  file/directory link Rename/Move, exact stored value and target identity.
 - `TestWorkspaceFileEntryMutations_DestinationOccupied`: AC 001.3, every occupied
   kind including dangling/loop destinations and distinct links to one target.
 - `TestWorkspaceFileEntryMutations_Compatibility`: AC 001.4, ordinary entries,
@@ -98,6 +101,8 @@ New API file `workspace_file_entry_mutations_test.go`:
   requests, root/alpha/beta link/target sentinels, exact 200/400 response paths,
   immediate root-tracker remove/rename events and no events on rejection/no-op.
   Cover both file and directory links and a Move through Rename to a new parent.
+- `TestRegisteredWorkspaceAbsoluteLeafMutations`: selected/aggregate absolute
+  contained file/directory link Rename/Move with target identity and notifications.
 
 Existing tracker registered-source, descendant-swap and cross-root suites remain
 in the targeted command. Existing HTTP Delete/Rename and client forwarding tests
@@ -118,6 +123,8 @@ No browser, phone E2E, product build, or public docs run is required.
 - [x] [Task 01: Preserve selected leaf entry](task-01-preserve-selected-entry.md)
 
 Only one work order, completed for ROOT-authorized implementation.
+Its bounded absolute-link follow-up has passed local verification under ROOT's
+exclusive lease; changing delivery status remains in the live task plan.
 Execution is sequential in this primary, without delegation. ROOT's concrete
 review receipt is `/tmp/kandev-root-child82-design-review-20261008.json`;
 its lease-return qualification is
@@ -170,6 +177,30 @@ Each JSON receipt retains the exact command, original UTC start/cutoff/end,
 actual command exit and fresh group scan. Wrapper exit 0 is not the command
 verdict. Native Linux behavior is verified; no Windows native pass is claimed.
 
+The bounded absolute-contained link follow-up reached causal RED at the
+published implementation before its production correction: four tracker and
+eight selected/aggregate HTTP Rename/Move cases rejected the preserved leaf
+through following post-barrier Stat. Only that entry check changed to Lstat;
+full canonical target Stat and root/authority admission remain intact. Affected
+race suites and scoped lint passed. The one required full changed-code lint
+timed out without diagnostics; ROOT authorized one identical recovery, which
+passed with zero issues. The timeout's cause remains unproved.
+
+| Follow-up command | Original handle / start / actual join | Actual exit | Fresh group |
+| --- | --- | --- | --- |
+| RED absolute tracker | 81688 / 1eb854 / 4b96a3 | 1, causal | 3958959 absent |
+| RED absolute HTTP | 28475 / 055922 / bee21a | 1, causal | 3971153 absent |
+| GREEN affected tracker | 78283 / 58c05e / 27c8cf | 0 | 3974034 absent |
+| GREEN affected HTTP | 92768 / d3ccbe / 481975 | 0 | 3976087 absent |
+| Scoped changed-code lint | 49470 / d4c88a / e51b5a | 0, zero issues | 3978253 absent |
+| Full changed-code lint | 18951 / bdef0c / 21d94e | 124, timeout | 3980379 absent |
+| ROOT-authorized identical recovery | 68730 / e7e7e7 / b55ffa | 0, zero issues | 4009096 absent |
+
+Both full lint commands used the verified actual PR base
+`e3732c65f8292cb1061cd327a5c9516223197cf2`, `./...`, GOMAXPROCS=2,
+GOMEMLIMIT=1GiB, concurrency 2, serial-runner admission, CLI 5m and GNU 6m
+with kill-after 10s. No cache/scope/timeout change or automatic retry occurred.
+
 ## Risks
 
 - Preserving a basename without validating the target could relax root/escape
@@ -198,8 +229,11 @@ original local commands joined with actual terminal verdicts and absent groups
 before the explicit local-heavy RETURN and the single hosted observer.
 
 ROOT authorized a documentation-only correction for duplicate stale handoff
-findings while that original observer remained live. No production or tests
-changed. Current-head CI/review qualification, finding dispositions, delivery
+findings while that original observer remained live. That correction did not
+change production or tests. The later bounded absolute-link correction changed
+only the final Rename entry check and its real-filesystem regressions; its
+local verification and original timeout/recovery receipts are recorded above.
+Current-head CI/review qualification, finding dispositions, delivery
 receipts and the exact next action belong in the versioned task plan, preserving
 task/session identity, system marker, user edits and protected proof. ROOT
 retains the separate serial merge gate; terminal hosted CI and merge are not

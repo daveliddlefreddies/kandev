@@ -78,6 +78,18 @@ or sibling contact. ROOT owns integration and serial merge.
 
 ## Verification
 
+The bounded absolute-contained leaf correction first runs these new selectors
+against the published implementation before changing production:
+
+```bash
+(cd apps/backend && timeout --kill-after=10s 6m env GOMAXPROCS=2 GOMEMLIMIT=512MiB go test -trimpath -tags=fts5 -race -p=1 -count=1 -timeout=5m ./internal/agentctl/server/process -run '^TestWorkspaceFileEntryMutations_AbsoluteLeafIdentity$')
+(cd apps/backend && timeout --kill-after=10s 6m env GOMAXPROCS=2 GOMEMLIMIT=512MiB go test -trimpath -tags=fts5 -race -p=1 -count=1 -timeout=5m ./internal/agentctl/server/api -run '^TestRegisteredWorkspaceAbsoluteLeafMutations$')
+```
+
+After causal RED, verify affected process/HTTP cases with existing Rename,
+authority and mutation-barrier controls, scoped lint and the full changed-code
+fixup lint below. Do not repeat unchanged forwarding or unrelated passing suites.
+
 The following commands are future implementation commands, **not authorized in
 the design turn**. Run each from repo root with isolated package working
 directories; retain the original native session and join to actual termination.
@@ -165,8 +177,25 @@ terminal verdict and absent process group; historical receipts and UTC
 boundaries remain in the [manifest](plan.md) and task plan.
 
 ROOT authorized a documentation-only correction for the duplicate delivery
-handoff findings while the original hosted collector remained live. Production,
-tests and their passing verification are unchanged. Live delivery status,
+handoff findings while the original hosted collector remained live. That
+correction preserved production, tests and their passing verification.
+
+ROOT subsequently released a bounded absolute-contained leaf correction. Four
+tracker and eight registered HTTP Rename/Move cases reached causal RED before
+the production edit: the post-barrier source `Stat` followed the preserved
+absolute link and returned a native path-escape error. Canonical target admission
+still uses `Stat`; only the post-barrier selected entry check changes to `Lstat`.
+The new cases retain tree metadata, target identity/type/bytes, stored link value,
+unselected sentinels, exact response and immediate notification assertions.
+Affected process and registered HTTP race verification and scoped lint passed.
+The required full changed-code backend lint first timed out with actual exit
+124 and no diagnostics; its original process joined and group was absent.
+ROOT reviewed that failed receipt and authorized one identical recovery, which
+passed with zero issues. The original failure remains historical evidence;
+no cause or passing result is inferred for it. Exact commands, UTC boundaries,
+native joins and absent-group receipts remain in the task plan and manifest.
+
+Live delivery status,
 current-head CI/review evidence, finding dispositions and the exact next action
 belong in this task's versioned Kandev plan. That plan owns continuation of the
 single original collector and ROOT's separate serial merge gate; this work order

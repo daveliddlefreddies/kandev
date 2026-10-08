@@ -150,14 +150,19 @@ func (f *apiEntryMutationFixture) assertPreserved(t *testing.T, selected, dest s
 
 func (f *apiEntryMutationFixture) assertTreeAlias(t *testing.T, scope string) {
 	t.Helper()
+	f.assertTreeEntry(t, scope, "alias")
+}
+
+func (f *apiEntryMutationFixture) assertTreeEntry(t *testing.T, scope, name string) {
+	t.Helper()
 	query := url.Values{"path": {scope}, "depth": {"1"}}
 	rec := workspaceRequest(t, f.server, http.MethodGet, "/api/v1/workspace/tree?"+query.Encode(), nil)
 	response := decodeWorkspaceBody[streams.FileTreeResponse](t, rec)
 	if rec.Code != http.StatusOK || response.Root == nil || response.Error != "" {
 		t.Fatalf("registered inventory failed: status=%d body=%+v", rec.Code, response)
 	}
-	alias := findTreeChild(response.Root, "alias")
-	if alias == nil || alias.Path != filepath.Join(scope, "alias") || !alias.IsSymlink || alias.IsDir != f.dirLink {
+	alias := findTreeChild(response.Root, name)
+	if alias == nil || alias.Path != filepath.Join(scope, name) || !alias.IsSymlink || alias.IsDir != f.dirLink {
 		t.Fatalf("registered inventory selected alias = %+v", alias)
 	}
 }
@@ -191,6 +196,65 @@ func TestRegisteredWorkspaceFileEntryMutations(t *testing.T) {
 	}
 	t.Run("root-alias-rejection", runAPIEntryMutationRootRejection)
 	t.Run("external-parent-rejection", runAPIEntryMutationExternalParent)
+}
+
+// @covers AC-WORKSPACES-FILE-ENTRY-MUTATIONS-001.2
+// @covers AC-WORKSPACES-FILE-ENTRY-MUTATIONS-001.6
+func TestRegisteredWorkspaceAbsoluteLeafMutations(t *testing.T) {
+	for _, route := range []apiEntryMutationCase{
+		{name: "selected-repository", repo: "alpha"},
+		{name: "aggregate-path", prefix: "alpha"},
+	} {
+		for _, directory := range []bool{false, true} {
+			route.directory = directory
+			kind := "file"
+			if directory {
+				kind = "directory"
+			}
+			for _, operation := range []string{"rename", "move"} {
+				t.Run(route.name+"/"+kind+"/"+operation, func(t *testing.T) {
+					runAPIAbsoluteLeafMutation(t, route, operation)
+				})
+			}
+		}
+	}
+}
+
+func runAPIAbsoluteLeafMutation(t *testing.T, route apiEntryMutationCase, operation string) {
+	t.Helper()
+	fixture := newAPIEntryMutationFixture(t, route.directory)
+	scope := route.repo
+	if scope == "" {
+		scope = route.prefix
+	}
+	value := filepath.Join(fixture.root, scope, fixture.target)
+	selected := filepath.Join(scope, "absolute-alias")
+	apiEntryMutationLink(t, value, filepath.Join(fixture.root, selected))
+	fixture.assertTreeEntry(t, scope, "absolute-alias")
+	targetBefore, err := os.Lstat(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(route.prefix, "absolute-alias")
+	dest := filepath.Join(route.prefix, "renamed-absolute")
+	if operation == "move" {
+		dest = filepath.Join(route.prefix, "created", "deep", "moved-absolute")
+	}
+	rec := workspaceRequest(t, fixture.server, http.MethodPost, "/api/v1/workspace/file/rename",
+		streams.FileRenameRequest{Repo: route.repo, OldPath: path, NewPath: dest})
+	response := decodeWorkspaceBody[streams.FileRenameResponse](t, rec)
+	if rec.Code != http.StatusOK || !response.Success || response.Error != "" || response.OldPath != path || response.NewPath != dest {
+		t.Errorf("absolute contained leaf %s response: status=%d body=%+v", operation, rec.Code, response)
+	}
+	fixture.assertPreserved(t, "", "", false)
+	targetAfter, err := os.Lstat(value)
+	if err != nil || !os.SameFile(targetBefore, targetAfter) {
+		t.Errorf("absolute leaf mutation changed target identity: %v", err)
+	}
+	newEntry := filepath.Join(route.repo, dest)
+	apiEntryMutationAssertAbsent(t, filepath.Join(fixture.root, selected))
+	apiEntryMutationAssertLink(t, filepath.Join(fixture.root, newEntry), value)
+	apiEntryMutationAssertEvents(t, fixture.sub, types.FileOpRename, selected, newEntry)
 }
 
 func runAPIEntryMutationOperations(t *testing.T, route apiEntryMutationCase) {

@@ -140,6 +140,7 @@ func entryMutationAssertSnapshot(t *testing.T, root string, before map[string]st
 type entryMutationCase struct {
 	name      string
 	directory bool
+	absolute  bool
 	operation string
 	dest      string
 }
@@ -160,6 +161,19 @@ func TestWorkspaceFileEntryMutations_LeafIdentity(t *testing.T) {
 	}
 }
 
+// @covers AC-WORKSPACES-FILE-ENTRY-MUTATIONS-001.2
+// @covers AC-WORKSPACES-FILE-ENTRY-MUTATIONS-001.6
+func TestWorkspaceFileEntryMutations_AbsoluteLeafIdentity(t *testing.T) {
+	for _, tc := range []entryMutationCase{
+		{name: "rename-absolute-file-link", absolute: true, operation: types.FileOpRename, dest: "renamed"},
+		{name: "rename-absolute-directory-link", directory: true, absolute: true, operation: types.FileOpRename, dest: "renamed"},
+		{name: "move-absolute-file-link", absolute: true, operation: types.FileOpRename, dest: filepath.Join("new", "deep", "moved")},
+		{name: "move-absolute-directory-link", directory: true, absolute: true, operation: types.FileOpRename, dest: filepath.Join("new", "deep", "moved")},
+	} {
+		t.Run(tc.name, func(t *testing.T) { runEntryMutationLeaf(t, tc) })
+	}
+}
+
 func runEntryMutationLeaf(t *testing.T, tc entryMutationCase) {
 	t.Helper()
 	dir, tracker := entryMutationTracker(t)
@@ -173,8 +187,12 @@ func runEntryMutationLeaf(t *testing.T, tc entryMutationCase) {
 	}
 	entryMutationWrite(t, bytesPath, "selected target bytes\n")
 	entryMutationWrite(t, filepath.Join(dir, "neighbor.txt"), "unselected neighbor bytes\n")
-	entryMutationLink(t, target, filepath.Join(dir, "alias"))
-	entryMutationLink(t, target, filepath.Join(dir, "unselected-alias"))
+	linkValue := target
+	if tc.absolute {
+		linkValue = filepath.Join(dir, target)
+	}
+	entryMutationLink(t, linkValue, filepath.Join(dir, "alias"))
+	entryMutationLink(t, linkValue, filepath.Join(dir, "unselected-alias"))
 	targetInfo, err := os.Lstat(filepath.Join(dir, target))
 	if err != nil {
 		t.Fatal(err)
@@ -202,11 +220,11 @@ func runEntryMutationLeaf(t *testing.T, tc entryMutationCase) {
 		t.Errorf("target entry identity changed: %v", statErr)
 	}
 	entryMutationAssertBytes(t, filepath.Join(dir, "neighbor.txt"), "unselected neighbor bytes\n")
-	entryMutationAssertLink(t, filepath.Join(dir, "unselected-alias"), target)
+	entryMutationAssertLink(t, filepath.Join(dir, "unselected-alias"), linkValue)
 	entryMutationAssertAbsent(t, filepath.Join(dir, "alias"))
 	paths := []string{"alias"}
 	if tc.dest != "" {
-		entryMutationAssertLink(t, filepath.Join(dir, tc.dest), target)
+		entryMutationAssertLink(t, filepath.Join(dir, tc.dest), linkValue)
 		paths = append(paths, tc.dest)
 	}
 	entryMutationAssertEvents(t, sub, tc.operation, paths...)

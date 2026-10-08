@@ -935,8 +935,11 @@ func (wt *WorkspaceTracker) RenameFile(oldPath, newPath string) error {
 	}
 	runWorkspaceMutationBarrier()
 
-	if err := validateSourceExistsRooted(oldResolved.root, oldResolved.rel, oldPath); err != nil {
-		return err
+	if _, err := oldResolved.root.Lstat(oldResolved.rel); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("path does not exist: %s", oldPath)
+		}
+		return fmt.Errorf("failed to stat path: %w", err)
 	}
 	if err := validateTargetAvailableRooted(newResolved.root, newResolved.rel, newPath); err != nil {
 		return err

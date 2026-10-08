@@ -88,15 +88,19 @@ continue through `Remove`. Preserve missing-file failure classification.
 
 Rename resolves both entry parents, rejects root operands and differing
 authority roots, and compares entry-relative paths for the existing no-op.
-Source eligibility still includes full-target validation. Validate destination
+Source eligibility still includes full-target validation with rooted `Stat` on
+the canonical target. After the mutation barrier, check the preserved source
+entry with rooted `Lstat`, so an eligible absolute contained link value is not
+followed again by the native root operation. Validate destination
 availability with rooted `Lstat`; only an absent final entry is available.
 Missing ancestors remain eligible for rooted `MkdirAll`. A dangling or looping
 destination link is occupied without dereferencing it. Never compare source
 and destination canonical targets to infer a no-op: distinct links to the same
 target are distinct entries. Use retained-root `Rename` to move the entry.
 
-Relative link values are not rewritten during move. In a new parent directory
-the link may become dangling; target bytes remain untouched. No promise of
+Stored absolute and relative link values are not rewritten during move. In a
+new parent directory a relative link may become dangling; target bytes remain
+untouched. No promise of
 atomic no-clobber against concurrent within-root destination creation is added.
 
 ## Containment and race boundary
