@@ -23,7 +23,7 @@ import {
   settingsControlClassName,
 } from "@/components/settings/settings-control";
 import { useResponsiveBreakpoint } from "@/hooks/use-responsive-breakpoint";
-import type { WorkspaceCloneFlow } from "./use-workspace-clone";
+import type { WorkspaceCloneFlow } from "@/hooks/domains/workspace/use-workspace-clone";
 
 function CloneForm({ flow }: { flow: WorkspaceCloneFlow }) {
   const { t } = useTranslation();

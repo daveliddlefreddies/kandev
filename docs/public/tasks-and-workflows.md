@@ -174,9 +174,11 @@ settings from the default workspace.
 
 ## Clone a workspace
 
-Open **Settings → Workspaces**, select the **Clone** copy icon on the source workspace,
-enter a name, then select **Clone workspace**. The copy opens in its settings;
-your active workspace stays selected. On phones, the form opens in a bottom sheet.
+Open **Settings → Workspaces** and use the **…** actions menu beside the source
+workspace name, or use the same menu in that workspace's settings header.
+Select **Clone workspace**, enter a name, then select **Clone workspace**.
+Clone copies saved setup; save any settings edits first. The copy opens in its
+settings; your active workspace stays selected. On phones, the form opens in a bottom sheet.
 
 The copy includes general settings, repository configuration and scripts,
 repository sets, workflow definitions, and the GitHub connection plus saved and

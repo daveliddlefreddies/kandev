@@ -199,3 +199,35 @@ Implementation was authorized by the later explicit request. Requirements are
 `active`, the design is `current`, and this package is implemented. The
 implementation checkpoint left the changes uncommitted; the subsequent user
 continuation proceeds with a normal hooked commit. No delegation was used.
+
+### Workspace actions placement refinement
+
+The user requested an action attached to the workspace identity and another
+entry inside the workspace page. Use one shared ellipsis menu beside the name
+and Active badge in list cards and every workspace settings header. The labelled
+Clone workspace item closes the menu before opening the existing form; cancel
+returns focus to the persistent ellipsis trigger. The list's whole-card
+navigation remains the main tap destination. Reuse the shared Radix inset phone
+menu and clone Drawer, with 44px targets, bounded scroll and safe areas. The
+agent-profile row actions are the nearest shipped secondary-action exemplar.
+The hook and form move to shared workspace hook/component owners, without
+changing clone persistence or authorization. Clone reads saved configuration.
+
+```text
+Desktop list: | Name [Active] [···] | Resources          | > |
+Desktop page: | Folder | [Workspace v] [Active] [···]       |
+Phone page:   | Folder | [Workspace v] [Active] [···] |
+                         -> inset actions menu
+                            [copy] Clone workspace
+                         -> existing clone dialog/sheet
+```
+
+Verification adds wide-card action proximity, keyboard activation, menu-to-form
+focus return, phone menu target sizes, header containment and real cloning from
+the viewed workspace on a settings tab in both projects. Existing clone flow
+and retry coverage remains in scope.
+
+Implemented and verified: 33 targeted unit tests, scoped lint, TypeScript and
+complete localization gates passed. Fresh managed desktop 3/3 and phone 3/3
+browser tests passed, including wide-card proximity and page-header cloning.
+Task 04 records exact results.

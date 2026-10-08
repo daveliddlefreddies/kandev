@@ -289,5 +289,6 @@
   "cloneForbidden": "You do not have permission to copy this workspace or its GitHub connection.",
   "cloneSourceMissing": "The source workspace is no longer available.",
   "cloneConfigurationUnsupported": "This workspace has managed settings, unavailable defaults, or workflow references that cannot be cloned.",
-  "cloneFailed": "Could not clone the workspace. Please try again."
+  "cloneFailed": "Could not clone the workspace. Please try again.",
+  "workspaceActionsNamed": "Actions for {{name}}"
 }

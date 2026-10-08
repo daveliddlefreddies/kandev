@@ -289,5 +289,6 @@
   "cloneForbidden": "你沒有權限複製此工作區或其 GitHub 連接。",
   "cloneSourceMissing": "源工作區已不可用。",
   "cloneConfigurationUnsupported": "此工作區包含無法複製的受管理設定、不可用的預設設定或工作流程引用。",
-  "cloneFailed": "無法複製工作區，請重試。"
+  "cloneFailed": "無法複製工作區，請重試。",
+  "workspaceActionsNamed": "{{name}}的操作"
 }

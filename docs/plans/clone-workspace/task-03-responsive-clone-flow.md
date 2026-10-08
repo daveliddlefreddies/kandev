@@ -22,7 +22,7 @@ system_design:
 
 ## Summary
 
-Add workspace card actions and a shared clone form with desktop Dialog and
+Add workspace identity actions in list cards and settings headers, with a shared clone form with desktop Dialog and
 phone Drawer presentations. The name draft, submission logic, source ID,
 response merge, and error handling remain shared.
 
@@ -64,7 +64,7 @@ Excerpt of [full preview](plan.md#ascii-ui-preview), covering 003.1-.5:
 
 ```text
 UI-01 desktop | workspace card and clone dialog
-| Team tools [Active] | Resources | [copy] | > |
+| Team tools [Active] [···] | Resources | > |
 +--------------------------------------------+
 | Clone workspace                         X  |
 | From: Team tools                           |
@@ -74,7 +74,7 @@ UI-01 desktop | workspace card and clone dialog
 +--------------------------------------------+
 
 UI-02 phone | card action opens inset bottom drawer
-| Team tools [Active]              [copy]  > |
+| Team tools [Active] [···]               > |
 | Resources                                 |
     +-----------------------------------+
     | Clone workspace                   |
@@ -101,8 +101,8 @@ Fresh worktree prerequisite: `(cd apps && pnpm install --frozen-lockfile)` once
 if dependencies are missing. Run all blocks from the repository root.
 
 ```bash
-(cd apps/web && pnpm exec vitest run app/actions/workspaces.test.ts app/settings/workspace/use-workspace-clone.test.ts)
-(cd apps/web && pnpm exec eslint app/actions/workspaces.ts app/settings/workspace/workspaces-page-client.tsx app/settings/workspace/workspace-clone-dialog.tsx app/settings/workspace/use-workspace-clone.ts)
+(cd apps/web && pnpm exec vitest run app/actions/workspaces.test.ts hooks/domains/workspace/use-workspace-clone.test.ts)
+(cd apps/web && pnpm exec eslint app/actions/workspaces.ts app/settings/workspace/workspaces-page-client.tsx components/settings/workspaces/workspace-clone-dialog.tsx hooks/domains/workspace/use-workspace-clone.ts)
 (cd apps/web && pnpm run typecheck)
 (cd apps/web && pnpm run i18n:zh-hant)
 (cd apps/web && pnpm run i18n:check)
@@ -116,8 +116,10 @@ Task 04 owns targeted managed production-build browser verification.
 
 - `apps/web/app/actions/workspaces.ts` and `workspaces.test.ts`.
 - `apps/web/app/settings/workspace/workspaces-page-client.tsx`.
-- `apps/web/app/settings/workspace/workspace-clone-dialog.tsx` (new).
-- `apps/web/app/settings/workspace/use-workspace-clone.ts` and `.test.ts` (new).
+- `apps/web/components/settings/workspaces/workspace-clone-dialog.tsx`.
+- `apps/web/components/settings/workspaces/workspace-actions-menu.tsx`.
+- `apps/web/components/settings/workspaces/workspace-settings-shell.tsx` and `.test.tsx`.
+- `apps/web/hooks/domains/workspace/use-workspace-clone.ts` and `.test.ts` (new).
 - `apps/web/lib/types/http.ts` if a named request type is useful.
 - `apps/web/src/locales/{en,pt-pt,zh-cn,zh-hk,zh-tw,ja,ko}/workspaces.json`.
 - Generated pseudo-locale artifacts only through the existing i18n scripts.
@@ -152,7 +154,7 @@ The final localized form summary explicitly excludes repository secrets and
 keeps personal GitHub sign-in separate. All seven language catalogs and pseudo
 were regenerated/checked; the phone browser test verifies this summary.
 
-User-requested visual refinement: replace the prominent labeled card button
+Prior visual refinement replaced the prominent labeled card button
 with a ghost copy icon beside navigation. Use the shared square icon size
 (28px desktop; at least 44px on phones/coarse pointers), a localized tooltip
 and workspace-specific accessible name. Phone placement stays in the title
@@ -163,3 +165,35 @@ The compact icon revision passed scoped ESLint and TypeScript checks. The first
 TypeScript attempt exhausted its 2 GB heap; a sequential retry passed with a
 3 GB heap under a 4 GB process cap. No application code changed for the retry.
 Task 04 records the fresh desktop/phone browser evidence.
+
+### Workspace actions placement refinement
+
+The user requested an action attached to the workspace identity and another
+entry inside the workspace page. Use one shared ellipsis menu beside the name
+and Active badge in list cards and every workspace settings header. The labelled
+Clone workspace item closes the menu before opening the existing form; cancel
+returns focus to the persistent ellipsis trigger. The list's whole-card
+navigation remains the main tap destination. Reuse the shared Radix inset phone
+menu and clone Drawer, with 44px targets, bounded scroll and safe areas. The
+agent-profile row actions are the nearest shipped secondary-action exemplar.
+The hook and form move to shared workspace hook/component owners, without
+changing clone persistence or authorization. Clone reads saved configuration.
+
+```text
+Desktop list: | Name [Active] [···] | Resources          | > |
+Desktop page: | Folder | [Workspace v] [Active] [···]       |
+Phone page:   | Folder | [Workspace v] [Active] [···] |
+                         -> inset actions menu
+                            [copy] Clone workspace
+                         -> existing clone dialog/sheet
+```
+
+Verification adds wide-card action proximity, keyboard activation, menu-to-form
+focus return, phone menu target sizes, header containment and real cloning from
+the viewed workspace on a settings tab in both projects. Existing clone flow
+and retry coverage remains in scope.
+
+The final actions-menu revision passed 33 targeted unit tests (clone action,
+shared hook and settings switcher), scoped ESLint, TypeScript, all locale gates,
+and the six browser flows recorded in Task 04. New code reuses one menu and
+closes it before opening the shared form; persistent triggers retain focus.

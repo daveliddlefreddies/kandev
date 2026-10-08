@@ -289,5 +289,6 @@
   "cloneForbidden": "Não tem permissão para copiar este espaço de trabalho ou a sua ligação ao GitHub.",
   "cloneSourceMissing": "O espaço de trabalho de origem já não está disponível.",
   "cloneConfigurationUnsupported": "Este espaço de trabalho tem definições geridas, predefinições indisponíveis ou referências em fluxos de trabalho que não podem ser clonadas.",
-  "cloneFailed": "Não foi possível clonar o espaço de trabalho. Tente novamente."
+  "cloneFailed": "Não foi possível clonar o espaço de trabalho. Tente novamente.",
+  "workspaceActionsNamed": "Ações de {{name}}"
 }

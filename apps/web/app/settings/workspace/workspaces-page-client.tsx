@@ -3,13 +3,12 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { settingsActionClassName } from "@/components/settings/settings-control";
-import { IconChevronRight, IconPlus, IconCopy } from "@tabler/icons-react";
+import { IconChevronRight, IconPlus } from "@tabler/icons-react";
 import { Button } from "@kandev/ui/button";
 import { Card, CardContent } from "@kandev/ui/card";
 import { Separator } from "@kandev/ui/separator";
 import { Input } from "@kandev/ui/input";
 import { Label } from "@kandev/ui/label";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@kandev/ui/tooltip";
 import { cn } from "@kandev/ui/lib/utils";
 import Link from "@/components/routing/app-link";
 import { mapWorkspaceItem } from "@/lib/routing/route-bootstrap";
@@ -29,8 +28,9 @@ import {
 import { orderWorkspacesForDisplay } from "@/lib/settings/workspace-display-order";
 import type { WorkspaceState } from "@/lib/state/slices";
 
-import { canCloneWorkspace, useWorkspaceClone } from "./use-workspace-clone";
-import { WorkspaceCloneDialog } from "./workspace-clone-dialog";
+import { useWorkspaceClone } from "@/hooks/domains/workspace/use-workspace-clone";
+import { WorkspaceActionsMenu } from "@/components/settings/workspaces/workspace-actions-menu";
+import { WorkspaceCloneDialog } from "@/components/settings/workspaces/workspace-clone-dialog";
 
 type Workspace = WorkspaceState["items"][number];
 
@@ -111,41 +111,23 @@ function WorkspaceListItem({
         className="absolute inset-0"
         data-testid="workspace-overview-link"
       />
-      <CardContent className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 lg:grid-cols-[11rem_minmax(0,1fr)_auto_auto] lg:gap-6">
+      <CardContent className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 lg:grid-cols-[15rem_minmax(0,1fr)_auto] lg:gap-6">
         <div className="min-w-0">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className="truncate text-lg font-semibold">{workspace.name}</h4>
-              {isActive && <ActiveWorkspaceBadge />}
-            </div>
-            <p className="mt-0.5 hidden text-sm text-muted-foreground lg:block">
-              {settled ? t("workspaces:resourceCount", { count: total }) : "\u00a0"}
-            </p>
+          <div className="flex min-w-0 items-center gap-2">
+            <h4 className="truncate text-lg font-semibold">{workspace.name}</h4>
+            {isActive && <ActiveWorkspaceBadge />}
+            <WorkspaceActionsMenu workspace={workspace} onClone={onClone} />
           </div>
+          <p className="mt-0.5 hidden text-sm text-muted-foreground lg:block">
+            {settled ? t("workspaces:resourceCount", { count: total }) : "\u00a0"}
+          </p>
         </div>
         <WorkspaceSectionStats
           workspaceId={workspace.id}
           counts={counts}
-          className="col-span-3 row-start-2 min-w-0 lg:col-span-1 lg:col-start-2 lg:row-start-1"
+          className="col-span-2 row-start-2 min-w-0 lg:col-span-1 lg:col-start-2 lg:row-start-1"
         />
-        {canCloneWorkspace(workspace) && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative z-10 col-start-2 row-start-1 text-muted-foreground lg:col-start-3"
-                aria-label={t("workspaces:cloneWorkspaceNamed", { name: workspace.name })}
-                onClick={() => onClone(workspace)}
-                data-testid="clone-workspace-button"
-              >
-                <IconCopy className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("workspaces:cloneWorkspace")}</TooltipContent>
-          </Tooltip>
-        )}
-        <IconChevronRight className="col-start-3 row-start-1 h-5 w-5 text-muted-foreground lg:col-start-4" />
+        <IconChevronRight className="col-start-2 row-start-1 h-5 w-5 text-muted-foreground lg:col-start-3" />
       </CardContent>
     </Card>
   );

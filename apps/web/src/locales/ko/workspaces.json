@@ -289,5 +289,6 @@
   "cloneForbidden": "이 워크스페이스 또는 GitHub 연결을 복사할 권한이 없습니다.",
   "cloneSourceMissing": "원본 워크스페이스를 더 이상 사용할 수 없습니다.",
   "cloneConfigurationUnsupported": "이 워크스페이스에 복제할 수 없는 관리 설정, 사용할 수 없는 기본 구성 또는 워크플로 참조가 있습니다.",
-  "cloneFailed": "워크스페이스를 복제할 수 없습니다. 다시 시도하세요."
+  "cloneFailed": "워크스페이스를 복제할 수 없습니다. 다시 시도하세요.",
+  "workspaceActionsNamed": "{{name}} 작업"
 }

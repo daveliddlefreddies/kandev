@@ -1,5 +1,6 @@
 import { test, expect } from "../../fixtures/test-base";
 import { seedCloneSource, proveClone } from "../../helpers/workspace-clone";
+import { waitForFiniteAnimations } from "../../helpers/pr-capture";
 
 test("phone clone uses an inset sheet and persists the complete setup", async ({
   testPage,
@@ -9,7 +10,7 @@ test("phone clone uses an inset sheet and persists the complete setup", async ({
   const source = await seedCloneSource(apiClient, seedData.repositoryPath);
   await testPage.setViewportSize({ width: 390, height: 844 });
   await testPage.goto("/settings/workspaces");
-  const trigger = testPage.getByRole("button", { name: `Clone ${source.name}`, exact: true });
+  const trigger = testPage.getByRole("button", { name: `Actions for ${source.name}`, exact: true });
   await trigger.scrollIntoViewIfNeeded();
   const triggerBounds = await trigger.boundingBox();
   expect(triggerBounds!.height).toBeGreaterThanOrEqual(44);
@@ -24,6 +25,14 @@ test("phone clone uses an inset sheet and persists the complete setup", async ({
     ),
   ).toBeLessThan(2);
   await trigger.tap();
+  const cloneItem = testPage.getByRole("menuitem", { name: "Clone workspace", exact: true });
+  await expect(cloneItem).toBeVisible();
+  await waitForFiniteAnimations(testPage.getByRole("menu"));
+  expect((await cloneItem.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  const menuBox = await testPage.getByRole("menu").boundingBox();
+  expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+  expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(390);
+  await cloneItem.tap();
   const sheet = testPage.getByTestId("workspace-clone-sheet");
   await expect(sheet).toBeVisible();
   await expect(sheet).toContainText("repository secrets");
@@ -40,6 +49,7 @@ test("phone clone uses an inset sheet and persists the complete setup", async ({
   await expect(sheet).toBeHidden();
   await expect(trigger).toBeFocused();
   await trigger.tap();
+  await testPage.getByRole("menuitem", { name: "Clone workspace", exact: true }).tap();
   await input.fill("My cloned workspace");
   const created = testPage.waitForResponse(
     (response) =>
@@ -66,7 +76,8 @@ test("phone failure retains the name and prevents duplicate pending taps", async
     "Retry source with a long name for the phone sheet",
   );
   await testPage.goto("/settings/workspaces");
-  await testPage.getByRole("button", { name: `Clone ${source.name}`, exact: true }).tap();
+  await testPage.getByRole("button", { name: `Actions for ${source.name}`, exact: true }).tap();
+  await testPage.getByRole("menuitem", { name: "Clone workspace", exact: true }).tap();
   const sheet = testPage.getByTestId("workspace-clone-sheet");
   await sheet.getByLabel("Workspace Name", { exact: true }).fill("   ");
   await expect(sheet.getByRole("button", { name: "Clone workspace", exact: true })).toBeDisabled();
@@ -108,4 +119,62 @@ test("phone failure retains the name and prevents duplicate pending taps", async
   await submit.tap();
   await created;
   await expect(sheet).toBeHidden();
+});
+
+test("phone workspace page actions fit the header and clone the viewed source", async ({
+  testPage,
+  apiClient,
+  seedData,
+}) => {
+  const source = await seedCloneSource(apiClient, seedData.repositoryPath);
+  await testPage.setViewportSize({ width: 320, height: 844 });
+  await testPage.goto(`/settings/workspaces/${seedData.workspaceId}/workflows`);
+  const activeActions = testPage
+    .getByTestId("workspace-settings-shell")
+    .getByTestId("workspace-actions-menu");
+  await expect(testPage.getByTestId("workspace-settings-active-badge")).toBeVisible();
+  const activeBox = await activeActions.boundingBox();
+  expect(activeBox!.x + activeBox!.width).toBeLessThanOrEqual(320);
+  expect(activeBox!.width).toBeGreaterThanOrEqual(44);
+  await activeActions.tap();
+  await expect(
+    testPage.getByRole("menuitem", { name: "Clone workspace", exact: true }),
+  ).toBeVisible();
+  await testPage.keyboard.press("Escape");
+  await expect(activeActions).toBeFocused();
+  await testPage.setViewportSize({ width: 390, height: 844 });
+  await testPage.goto(`/settings/workspaces/${source.id}/workflows`);
+  const trigger = testPage.getByRole("button", { name: `Actions for ${source.name}`, exact: true });
+  const box = await trigger.boundingBox();
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+  expect(box!.width).toBeGreaterThanOrEqual(44);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  await trigger.tap();
+  const cloneItem = testPage.getByRole("menuitem", { name: "Clone workspace", exact: true });
+  await expect(cloneItem).toBeVisible();
+  await waitForFiniteAnimations(testPage.getByRole("menu"));
+  expect((await cloneItem.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await cloneItem.tap();
+  const sheet = testPage.getByTestId("workspace-clone-sheet");
+  await expect(sheet).toBeVisible();
+  await expect(sheet).toContainText(source.name);
+  await sheet.getByRole("button", { name: "Cancel", exact: true }).tap();
+  await expect(trigger).toBeFocused();
+  await trigger.tap();
+  await testPage.getByRole("menuitem", { name: "Clone workspace", exact: true }).tap();
+  await sheet.getByLabel("Workspace Name", { exact: true }).fill("My cloned workspace");
+  const created = testPage.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/workspaces/${source.id}/clone`) &&
+      response.request().method() === "POST",
+  );
+  await sheet.getByRole("button", { name: "Clone workspace", exact: true }).tap();
+  const response = await created;
+  expect(response.status()).toBe(201);
+  const target = await response.json();
+  await expect(testPage).toHaveURL(new RegExp(`/settings/workspaces/${target.id}$`));
+  expect(
+    await testPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+  ).toBe(true);
+  await proveClone(testPage, apiClient, source.id, target.id, true);
 });

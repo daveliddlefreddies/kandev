@@ -160,16 +160,28 @@ setup in the destination. Clone does not claim provider readiness.
 
 ## Responsive form and shared state
 
-Add a ghost copy-icon action beside each eligible workspace card's navigation
-cue in `workspaces-page-client.tsx`, with a localized tooltip and a workspace-specific
-accessible name. Use the shared icon sizing (28px desktop; at least 44px on
-phones/coarse pointers). Keep it in the phone title row and after resources on
-desktop, without a dedicated phone action row. Its hit region must be above the existing
-whole-card overlay link. Derive permissions from the projected workspace scopes
-and eligibility from `isOfficeWorkspace` plus the managed-workspace predicate;
-the backend remains authoritative.
+Use a shared workspace actions menu beside the name and Active badge in each
+eligible list card and in the workspace settings page header on every tab.
+The ellipsis stays attached to the workspace identity, including wide desktop
+cards; it does not occupy the empty space after the resource tiles. The menu
+contains a labelled Clone workspace action and has a workspace-specific
+accessible name. Use the shared square trigger sizing (28px desktop; at least
+44px on phones/coarse pointers). The list trigger sits above the existing
+whole-card link. Clone targets the viewed workspace, preserving globally active
+selection. Derive eligibility from projected scopes, `isOfficeWorkspace` and
+the managed-workspace predicate; the backend remains authoritative.
 
-Use a new `workspace-clone-dialog.tsx` with shared form state/submit hook.
+Reuse the shared Radix menu's inset phone treatment and 44px menu rows. Close
+the menu before opening the clone form, recording its persistent ellipsis trigger
+as the focus-return target. Keep the page switcher flexible on phones so the
+name, Active badge and actions fit together without horizontal overflow.
+
+The clone state/submit hook lives in `hooks/domains/workspace/` and the shared
+menu and `workspace-clone-dialog.tsx` in `components/settings/workspaces/`.
+List cards share one form owner; the settings shell owns one form across its
+responsive presentation. Both entry points clone persisted setup, not unsaved
+settings drafts. The existing settings navigation guard still owns leaving a
+dirty page after clone success.
 Desktop uses the existing Dialog primitive. Phone uses the inset Drawer
 geometry exemplified by `components/task/mobile/mobile-picker-sheet.tsx`.
 This occasional single-field operation needs a short drawer rather than a

@@ -289,5 +289,6 @@
   "cloneForbidden": "このワークスペースまたは GitHub 接続をコピーする権限がありません。",
   "cloneSourceMissing": "コピー元のワークスペースは利用できなくなりました。",
   "cloneConfigurationUnsupported": "このワークスペースには、複製できない管理対象の設定、利用できない既定の構成、またはワークフローの参照があります。",
-  "cloneFailed": "ワークスペースを複製できませんでした。もう一度お試しください。"
+  "cloneFailed": "ワークスペースを複製できませんでした。もう一度お試しください。",
+  "workspaceActionsNamed": "{{name}}の操作"
 }

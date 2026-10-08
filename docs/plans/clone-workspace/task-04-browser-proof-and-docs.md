@@ -189,7 +189,7 @@ the design `current`, and the plan `implemented`. Changes were uncommitted at
 the implementation checkpoint; the subsequent user continuation starts commit
 delivery with normal hooks.
 
-### Compact Clone action refinement
+### Prior compact-icon verification
 
 The user-requested card refinement replaces the labeled button with a ghost
 copy icon and localized tooltip. Phone placement moves into the title row.
@@ -207,3 +207,30 @@ The focused desktop size regression failed against the old wide button before
 the implementation changed. The public procedure and durable UI previews now
 identify the compact copy icon. Screenshot publication remains a delivery step
 outside this implementation work order.
+
+### Workspace actions menu and page entry
+
+After a fresh managed production build, the bounded host commands above passed:
+
+- Desktop: 3/3 passed in 20.6s, log `/tmp/kandev-run.e2e.xQwdSmHm.log`.
+  The 2048px list check keeps the menu beside the workspace name. Keyboard
+  activation, breakpoint sizes, shared draft and cancel/focus return pass. A
+  new page-header flow clones the viewed workspace from Repositories and
+  verifies the saved configuration and query defaults through real persistence.
+- Phone: 3/3 passed in 28.1s, log `/tmp/kandev-run.e2e.0lBjintU.log`.
+  The Active header fits at 320px. List/page actions and menu rows retain 44px
+  targets; menus and sheets stay contained. The new Workflows page-header flow
+  clones the viewed workspace and verifies persistence and query defaults.
+
+The page-action regression failed because the trigger was absent before the
+implementation. Initial browser runs exposed test-fixture assumptions: the
+shared verifier expects a fixed clone name, and target geometry must be measured
+after finite opening animations. The final runs use that fixture name and wait
+for animation completion without adding timed sleeps. No application change
+was needed for those assertion corrections.
+
+The shared clone hook/form moved to domain hook/component owners. 33 targeted
+unit tests, scoped lint, TypeScript and all i18n gates passed. Durable previews
+and public instructions cover both menu entry points and saved setup semantics.
+Public-page, catalog, specification lint, changed-file coverage and whitespace
+validation passed. The plan is implemented and all work orders remain done.
