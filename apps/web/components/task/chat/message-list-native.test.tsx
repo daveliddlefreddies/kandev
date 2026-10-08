@@ -105,7 +105,11 @@ vi.mock("@/components/state-provider", () => ({
   }),
 }));
 
-import { useScrollToDividerOrBottom } from "./message-list-native";
+import {
+  shouldRenderTurnChangeFallback,
+  turnChangeFallbackIndex,
+  useScrollToDividerOrBottom,
+} from "./message-list-native";
 import { preserveChatScrollDuringLayout } from "@/lib/state/dockview-scroll-preserve";
 import {
   isElementInPreloadRegion,
@@ -131,6 +135,40 @@ const LATEST_MESSAGE_ID = "latest-message";
 const TEST_MESSAGES = [{} as Message];
 /** Always returns false: the harness never locks programmatic scrolling. */
 const NEVER_LOCKED = () => false;
+
+describe("turn change transcript fallback placement", () => {
+  const messageItems = [
+    {
+      type: "message",
+      message: { id: "reply-1", turn_id: "turn-1", created_at: "2026-10-08T10:00:00Z" } as Message,
+    },
+    {
+      type: "message",
+      message: { id: "tool-2", turn_id: "turn-2", created_at: "2026-10-08T10:02:00Z" } as Message,
+    },
+    {
+      type: "message",
+      message: { id: "reply-2", turn_id: "turn-2", created_at: "2026-10-08T10:03:00Z" } as Message,
+    },
+  ] as RenderItem[];
+
+  it("keeps cards under their own final replies when multiple turns are loaded", () => {
+    expect(shouldRenderTurnChangeFallback("reply-1", messageItems, true)).toBe(false);
+    expect(shouldRenderTurnChangeFallback("reply-2", messageItems, false)).toBe(false);
+    expect(turnChangeFallbackIndex(messageItems, "turn-2")).toBe(2);
+  });
+
+  it("waits for older pages before treating a missing anchor as a no-reply terminal row", () => {
+    expect(shouldRenderTurnChangeFallback("reply-old", messageItems, true)).toBe(false);
+    expect(shouldRenderTurnChangeFallback(undefined, messageItems, true)).toBe(false);
+    expect(shouldRenderTurnChangeFallback(undefined, messageItems, false)).toBe(true);
+  });
+
+  it("places a cancellation fallback at its chronological turn row", () => {
+    expect(turnChangeFallbackIndex(messageItems, "cancelled-turn", "2026-10-08T10:02:30Z")).toBe(1);
+    expect(turnChangeFallbackIndex(messageItems, "turn-2")).toBe(2);
+  });
+});
 
 function touchEvent(type: "touchstart" | "touchmove", clientY: number): TouchEvent {
   const event = new Event(type) as TouchEvent;

@@ -1288,6 +1288,7 @@ func (m *Manager) StopAgentWithReason(ctx context.Context, executionID string, r
 	// Try to gracefully stop via agentctl first, then always close connections.
 	// A retained Kubernetes resume gets a bounded non-cancelled opportunity to
 	// stop the failed process before its Pod is preserved for another retry.
+	m.preserveTurnChangesBeforeStop(stopCtx, execution)
 	agentStopFailed := m.stopExecutionAgentctl(stopCtx, executionID, execution, backendForce)
 
 	// Stop the agent execution via the runtime that created it. A failed stop
