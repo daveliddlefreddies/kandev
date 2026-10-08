@@ -163,7 +163,7 @@ setup in the destination. Clone does not claim provider readiness.
 Use a shared workspace actions menu beside the name and Active badge in each
 eligible list card and in the workspace settings page header on every tab.
 The ellipsis stays attached to the workspace identity, including wide desktop
-cards; it does not occupy the empty space after the resource tiles. The menu
+cards; it does not occupy the empty space after the resource tiles. The menu fits its translated label within the viewport and
 contains a labelled Clone workspace action and has a workspace-specific
 accessible name. Use the shared square trigger sizing (28px desktop; at least
 44px on phones/coarse pointers). The list trigger sits above the existing

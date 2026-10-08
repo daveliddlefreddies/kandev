@@ -42,6 +42,7 @@ export function WorkspaceActionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
+        className="w-max min-w-44 max-w-[calc(100vw-2rem)]"
         onCloseAutoFocus={(event) => {
           if (!cloneRequested.current) return;
           cloneRequested.current = false;

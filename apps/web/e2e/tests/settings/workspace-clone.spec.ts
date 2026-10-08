@@ -21,7 +21,9 @@ test("clones full setup and query defaults without changing the active workspace
     .boundingBox();
   expect(triggerBounds!.x - headingBounds!.x - headingBounds!.width).toBeLessThanOrEqual(16);
   await trigger.click();
-  await testPage.getByRole("menuitem", { name: "Clone workspace", exact: true }).click();
+  const cloneItem = testPage.getByRole("menuitem", { name: "Clone workspace", exact: true });
+  await expect(cloneItem).toHaveCSS("height", "28px");
+  await cloneItem.click();
   const dialog = testPage.getByTestId("workspace-clone-dialog");
   await expect(dialog).toBeVisible();
   await expect(testPage).toHaveURL(/\/settings\/workspaces$/);
