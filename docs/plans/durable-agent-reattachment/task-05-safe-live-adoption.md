@@ -1191,3 +1191,77 @@ The same loader then passed 74 work orders with 199 referenced documents.
 Catalog validation passed (365 decisions, 1444 specs). This is local evidence;
 fresh pushed-head CI, native containment and targeted durable PostgreSQL/live
 harness gates remain external and pending.
+
+
+### Subsequent main integration: initial brief and coordinator control
+
+Preserved incoming initial-brief dispatch ownership, accepted reference context,
+and durable direct-message identity together. Regression assertions reproduced
+missing delivery IDs for recovered ready-session dispatch and its compound
+resume retry; both now pass. Ordinary queue drain retains its durable recovery
+fence and the initial-brief ownership gate. The Windows process cohort runner
+retains uncached subprocess execution. Shared browser helpers preserve readiness,
+layout restoration, held notifications, and pending-or-completed history.
+
+Integrated the coordinator-control increment without changing recovery policy.
+The Korean catalog conflict retains both translation sets; duplicate-key checks
+passed across all task catalogs. No automatic resend or destructive survivor
+cleanup was introduced.
+
+Final integrated-tree validation passed (commands from repository root unless
+an explicit working directory is shown):
+
+- From `apps/backend`: `go test -race ./internal/coordinator
+  ./internal/backendapp ./internal/agent/runtime/lifecycle
+  ./internal/orchestrator/executor ./internal/task/handlers
+  ./internal/persistence/requiredstores -run
+  'Test.*(Coordinator|InitialTaskBrief|Delivery|RuntimeReplacement|MCPIdentity|RequiredStore|Migration|Boot)'
+  -count=1`. The required-store package then passed its full suite separately:
+  `go test -race ./internal/persistence/requiredstores -count=1`.
+- From `apps/backend`: `go test -race ./internal/mcp/profile
+  ./internal/mcp/handlers ./internal/agentctl/server/process -run
+  'Test.*(Coordinator|Durable|Delivery)' -count=1`; full portable cohort-runner
+  suite `go test -race ./cmd/windows-process-tests -count=1`.
+- Workflow contract suite: 13 tests passed with
+  `python3 .github/scripts/backend-tests-workflow-contract_test.py`.
+- From `apps/backend`: changed-scope `golangci-lint run ./...
+  --new-from-rev=7c6fcf1b9d0e9f2e91e524c44dc710a319fd24c2
+  --allow-serial-runners --timeout=5m` passed with zero issues. From `apps/web`,
+  `pnpm run lint`, `pnpm run typecheck`, and `pnpm run i18n:check` passed.
+- `python3 scripts/lint-spec-files.py --all` and
+  `python3 scripts/list-docs.py validate` passed. Exact-loader preflight passed
+  74 work orders with 199 referenced documents. PR-introduced whitespace passes
+  against the authoritative base; incoming base-only whitespace is preserved.
+- Rebuilt desktop browser suite passed 33 first attempts. From `apps/web`:
+  `E2E_PORT_OFFSET=0 pnpm e2e:run --host
+  tests/git/changes-panel-refresh-recovery.spec.ts
+  tests/session/long-prepare-panels.spec.ts
+  tests/session/transient-turn-runtime-continuity.spec.ts
+  tests/task/directory-browser-hidden-folders.spec.ts
+  tests/task/subtask.spec.ts tests/task/sidebar-filter-selected-first.spec.ts
+  tests/task/task-create-workflow-step-previews.spec.ts
+  tests/coordinator/policy-enforcement.spec.ts --project=chromium --retries=0`.
+- After `make -C apps/backend build e2e-plugin-package`, desktop production
+  recovery coverage passed three first attempts from `apps/web`:
+  `E2E_PORT_OFFSET=0 pnpm e2e:run --no-build --host
+  tests/session/durable-reattachment.spec.ts
+  tests/session/durable-stream-recovery.spec.ts --project=chromium --retries=0`.
+- Sequential mobile coverage passed 17 first attempts from `apps/web`:
+  `E2E_PORT_OFFSET=0 pnpm e2e:run --no-build --host
+  tests/session/mobile-durable-reattachment.spec.ts
+  tests/session/mobile-durable-stream-recovery.spec.ts
+  tests/session/mobile-transient-turn-runtime-continuity.spec.ts
+  tests/settings/mobile-workspace-repository-sets.spec.ts
+  tests/task/mobile-directory-browser-hidden-folders.spec.ts
+  tests/task/mobile-sidebar-filter-selected-first.spec.ts
+  tests/task/mobile-task-create-workflow-step-previews.spec.ts
+  tests/coordinator/mobile-proposal-kinds.spec.ts
+  --project=mobile-chrome --retries=0`.
+
+A later conflict-free review-disposition increment was checked in an owned
+synthetic worktree: `pnpm exec vitest run
+hooks/domains/review/use-finding-actions.test.tsx` passed 20 tests; focused
+ESLint and `pnpm run typecheck` passed. Latest-head CI/review and final combined
+base evidence remain external until delivery. Native Windows/macOS containment
+and targeted durable PostgreSQL/live-harness release gates remain open. The
+queue runtime-loss flake remains unconfirmed; failed tests retain backend logs.

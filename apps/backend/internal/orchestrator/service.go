@@ -387,8 +387,8 @@ type DirectPromptStarterWithCanvasGuidanceAndPreservedPrompt interface {
 	) (*executor.TaskExecution, error)
 }
 
-// DirectPromptStartOptions carries the server-owned parts of a persisted
-// first-message launch through the created-session path.
+// DirectPromptStartOptions carries accepted direct-message identity and
+// server-owned composition through session start or prompt dispatch.
 type DirectPromptStartOptions struct {
 	SkipMessageRecord             bool
 	PlanMode                      bool

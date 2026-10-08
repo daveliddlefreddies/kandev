@@ -400,6 +400,8 @@ func admitBackendDeliverySubmission(
 	return ""
 }
 
+// PromptTaskWithDeliverySubmissionID retains the accepted context and message
+// identity through provider admission.
 func (s *Service) PromptTaskWithDeliverySubmissionID(
 	ctx context.Context,
 	taskID, sessionID, prompt, model string,
