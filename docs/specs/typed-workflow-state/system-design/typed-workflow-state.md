@@ -5,6 +5,7 @@ requirements:
   - REQ-TWS-001
   - REQ-TWS-002
   - REQ-TWS-005
+  - REQ-TWS-006
 ---
 
 # Typed workflow review state system design
@@ -161,6 +162,29 @@ matters, because the prompt build tests for `{{task_prompt}}` **after**
 interpolation, one line below the step-prompt call site
 (`buildWorkflowPromptWithTrustedContext`, `task_operations.go:1971`), so damaging it
 would silently drop the base prompt.
+
+### Task title inputs
+
+REQ-TWS-006 reuses the two call sites above, cited by function name rather than
+line because it was written against a later base than this inventory. The title
+comes from the orchestrator's existing `s.repo.GetTask(ctx, taskID)`; no new
+repository method or schema is needed (NFR-2). The lookup runs only when a
+template contains `{task_title}` and the task identifier is non-empty, so
+templates without the token pay nothing (NFR-3).
+
+Ordering is the design constraint. In the step path, `stepPromptBodyWithOptions`
+substitutes `{task_id}` and then the first `{{task_prompt}}` over the step
+template, and saved-prompt expansion later runs over the assembled prompt. A
+title substituted before that pass would have its own text re-scanned, so a
+title containing `{{task_prompt}}` would capture the base prompt. The step path
+therefore replaces `{task_title}` with a per-build random sentinel before
+`stepPromptBodyWithOptions` and swaps the title in afterwards. The sentinel
+cannot occur in the base prompt, so only positions authored in the step template
+receive the title, and `stepPromptBodyWithOptions` is unchanged. In
+`workflowInstructionsBlock` the title is substituted after `{task_id}` and
+`{step_entry_number}`, before the end-marker strip, so no sentinel is needed
+there. Saved-prompt expansion still sees the title, matching how it treats the
+base prompt (AC-TWS-006.9).
 
 ## E2E decision input
 
