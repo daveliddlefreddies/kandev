@@ -328,3 +328,35 @@ The full shard replay first validated the refreshed downloaded manifest with
 shard-10 files to the same guarded managed runner with both projects and
 `--retries=0`. Subsequent changes only add readiness guards to the three
 locally failing specs; the passing original cases need no additional rerun.
+
+## Additional shard-5 CI-remediation proof
+
+The exact current-head shard replay passed the reported managed-relocation
+case but exposed two further failures (243 passed, two skipped, two failed in
+51.4m, retries disabled). `executor-profile-routing.spec.ts` globally matched
+both the expanded sidebar profile link and its card. Reuse the exact
+`executor-profile-card-<id>` locator for the legacy executor entry point; retain
+all canonical-path, editor, persisted-save and leave-confirmation assertions.
+The runtime idle-cancellation failure is owned by the existing platform work
+orders under `docs/plans/transient-turn-runtime-continuity/`; their active
+requirements and historical results are preserved. Focused managed Playwright GREEN: 9/9
+tests passed in 9.8m, three repetitions
+per affected case with retries disabled after a fresh production build. Log:
+`/tmp/clone-fixup-e2e-local/kandev-run.e2e.AN57mwam.log`. Scoped lint and current-base
+composition passed as recorded below.
+Final current-head delivery remains pending externally.
+
+Final local checks: scoped Go lint reported zero issues; all three browser
+specs passed ESLint and Prettier. A conflict-free merge with the latest main
+passed 124 clone/routing/editor tests across 12 suites, 24 archived-sidebar
+freshness tests, and web TypeScript. The original 13-suite command supplied
+an incorrect sidebar path and ran only 12 suites; the sidebar suite then ran
+separately at `lib/sidebar/sidebar-archived-update-freshness.test.ts`. Logs:
+`/tmp/kandev-run.vitest.21UlgosQ.log`,
+`/tmp/kandev-run.vitest.p4wCbkEc.log`,
+`/tmp/kandev-run.typecheck.2e9Djqxo.log`.
+Actual changed-file work-order coverage passed with all unchanged referenced
+platform requirement/design inputs loaded. Full catalog/specification and
+whitespace checks passed. The primary session records exact merge/head IDs,
+normal hook receipts and fresh remote CI/review results in the external task
+plan, avoiding a documentation-only push that would invalidate those results.
