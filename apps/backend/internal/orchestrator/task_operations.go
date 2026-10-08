@@ -2881,8 +2881,11 @@ func (s *Service) recordInitialMessageForTurn(
 }
 
 // buildWorkflowPrompt constructs the effective prompt using workflow step configuration.
-// If step.Prompt contains {{task_prompt}}, it is replaced with the base prompt.
-// Otherwise, step.Prompt fully replaces the base prompt.
+// If step.Prompt contains {{task_prompt}}, its first occurrence is replaced with
+// the base prompt. Otherwise, step.Prompt fully replaces the base prompt.
+// Step and workflow-level templates also substitute every occurrence of the
+// single-brace placeholders {task_id}, {step_entry_number} and {task_title};
+// these are resolved against the templates only, never inside the base prompt.
 // If the step has enable_plan_mode in on_enter events, plan mode prefix is also prepended.
 // Only true internal instructions are wrapped in <kandev-system> tags so they can be stripped from the visible chat.
 func (s *Service) buildWorkflowPrompt(ctx context.Context, basePrompt string, step *wfmodels.WorkflowStep, taskID string, sessionID string, isPassthrough bool) string {
@@ -3005,18 +3008,22 @@ func (s *Service) buildWorkflowPromptWithTrustedContextOptions(
 	// fallback for this one entry; only the workflow-level block above (and any
 	// one-time move instructions appended by the caller) remain.
 	if !skipStepPrompt {
-		// {step_entry_number} is resolved against the step's own template before
-		// {{task_prompt}} substitution, so a literal token inside basePrompt (task
-		// description / direct message) is never treated as an interpolation
-		// target. The step is copied rather than mutated in place because it may
-		// be a cached/shared *wfmodels.WorkflowStep.
+		// {step_entry_number} and {task_title} are resolved against the step's
+		// own template before {{task_prompt}} substitution, so a literal token
+		// inside basePrompt (task description / direct message) is never treated
+		// as an interpolation target. The title is spliced in last, after
+		// stepPromptBodyWithOptions, so its text is never scanned for tokens.
+		// The step is copied rather than mutated in place because it may be a
+		// cached/shared *wfmodels.WorkflowStep.
+		interpolated := s.interpolateStepEntryNumberIfPresent(ctx, step.Prompt, taskID, step.ID)
+		interpolated, finalizeTitle := s.reserveTaskTitleInStepTemplate(ctx, interpolated, taskID)
 		interpolatedStep := step
-		if interpolated := s.interpolateStepEntryNumberIfPresent(ctx, step.Prompt, taskID, step.ID); interpolated != step.Prompt {
+		if interpolated != step.Prompt {
 			stepCopy := *step
 			stepCopy.Prompt = interpolated
 			interpolatedStep = &stepCopy
 		}
-		parts = append(parts, stepPromptBodyWithOptions(interpolatedStep, taskID, basePrompt, preserveDirectPrompt))
+		parts = append(parts, finalizeTitle(stepPromptBodyWithOptions(interpolatedStep, taskID, basePrompt, preserveDirectPrompt)))
 	}
 
 	joined := strings.Join(parts, "\n\n")
@@ -3036,7 +3043,8 @@ func (s *Service) buildWorkflowPromptWithTrustedContextOptions(
 // stepPromptBody renders the visible step prompt for one entry: the step's
 // prompt template with {{task_prompt}} resolved to basePrompt, a step prompt
 // without that placeholder used verbatim, or the base prompt when the step has
-// no prompt of its own.
+// no prompt of its own. It substitutes {task_id} itself; callers resolve
+// {step_entry_number} and {task_title} in step.Prompt beforehand.
 func stepPromptBody(step *wfmodels.WorkflowStep, taskID, basePrompt string) string {
 	return stepPromptBodyWithOptions(step, taskID, basePrompt, false)
 }
@@ -3078,6 +3086,8 @@ func (s *Service) workflowInstructionsBlock(ctx context.Context, step *wfmodels.
 	}
 	interpolated := sysprompt.InterpolatePlaceholders(prompt, taskID)
 	interpolated = s.interpolateStepEntryNumberIfPresent(ctx, interpolated, taskID, step.ID)
+	// The title is substituted last so its text is never scanned for tokens.
+	interpolated = s.interpolateTaskTitleIfPresent(ctx, interpolated, taskID)
 	interpolated = strings.TrimSpace(interpolated)
 	if interpolated == "" {
 		return ""
