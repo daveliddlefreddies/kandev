@@ -252,3 +252,23 @@ shared settings header acquired clone actions. Local reproduction confirmed
 the missing store API in the route fixture's state-provider mock. Isolating
 the clone interaction at that routing test boundary passed 82 tests across
 nine affected suites. Task 03 records the exact command and fixture repair.
+
+
+PR E2E remediation adjusts two pre-existing browser tests: completed-tools
+continuity now verifies the completed result in both viewers rather than
+requiring a transient retry countdown to survive navigation; mobile PR feedback
+waits for the finite drawer animation before tapping Close. Production code,
+assertion timeouts and exact continuation/side-effect checks remain unchanged.
+Task 04 records the original CI failure, desktop RED/GREEN and shard replay.
+
+
+The same shard replay exposed a profile-label hydration race. Desktop/phone
+profile-discovery tests now await the fixture's resolved model label before
+capturing the baseline; they retain selection-preservation and persisted-ID
+checks. Task 04 owns these test-only PR remediation changes and their evidence.
+
+
+Task 04's original E2E failures pass in a full shard replay with retries
+disabled. The replay exposed two additional timing assertions, repaired with
+existing animation/model-label readiness checks; all 40 focused desktop/phone
+repetitions pass. Final remote CI is still pending.

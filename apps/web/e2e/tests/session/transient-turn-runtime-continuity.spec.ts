@@ -207,51 +207,61 @@ test("desktop: completed tools continue once on the same runtime across reload a
     await testPage.goto(`/t/${fixture.taskId}`);
     await session.waitForLoad();
     await expect(session.transientRetryCard()).toBeVisible({ timeout: 30_000 });
-    await expect(session.transientRetryCard()).toContainText("Continuing in");
+    await expect(session.transientRetryCard()).toContainText("Previous conversation is preserved.");
     const executionId = await waitForExecutionId(apiClient, fixture.taskId, fixture.sessionId);
     assertRetainedACPTrace(fixture.tracePath, 1);
 
     await testPage.reload();
     await session.waitForLoad();
-    await expect(session.transientRetryCard()).toBeVisible();
     const viewer = await testPage.context().newPage();
     try {
       await viewer.goto(`/t/${fixture.taskId}`);
       const otherViewer = new SessionPage(viewer);
       await otherViewer.waitForLoad();
-      await expect(otherViewer.transientRetryCard()).toBeVisible();
-      await expect(otherViewer.transientRetryCard()).toContainText("Continuing");
+
+      await expect
+        .poll(
+          () =>
+            readMockACPTrace(fixture.tracePath).filter((record) => record.event === "prompt")
+              .length,
+          {
+            timeout: 60_000,
+          },
+        )
+        .toBe(2);
+      await expect
+        .poll(async () => {
+          const { sessions } = await apiClient.listTaskSessions(fixture.taskId);
+          return sessions.find((candidate) => candidate.id === fixture.sessionId)?.state;
+        })
+        .toBe("WAITING_FOR_INPUT");
+      await expect
+        .poll(async () => {
+          const { messages } = await apiClient.listSessionMessages(fixture.sessionId);
+          return messages.filter(
+            (message) =>
+              message.author_type === "agent" &&
+              message.content?.includes(
+                "continued the unfinished request without repeating completed work",
+              ) === true,
+          ).length;
+        })
+        .toBeGreaterThan(0);
+      for (const currentViewer of [session, otherViewer]) {
+        await expect(
+          currentViewer
+            .activeChat()
+            .getByText(
+              "Mock provider continued the unfinished request without repeating completed work.",
+              { exact: true },
+            ),
+        ).toBeVisible();
+        await expect(currentViewer.transientRetryCard()).toHaveCount(0);
+      }
     } finally {
       await viewer.close();
     }
 
-    await expect
-      .poll(
-        () =>
-          readMockACPTrace(fixture.tracePath).filter((record) => record.event === "prompt").length,
-        {
-          timeout: 60_000,
-        },
-      )
-      .toBe(2);
-    await expect
-      .poll(async () => {
-        const { sessions } = await apiClient.listTaskSessions(fixture.taskId);
-        return sessions.find((candidate) => candidate.id === fixture.sessionId)?.state;
-      })
-      .toBe("WAITING_FOR_INPUT");
-    await expect
-      .poll(async () => {
-        const { messages } = await apiClient.listSessionMessages(fixture.sessionId);
-        return messages.filter(
-          (message) =>
-            message.author_type === "agent" &&
-            message.content?.includes(
-              "continued the unfinished request without repeating completed work",
-            ) === true,
-        ).length;
-      })
-      .toBeGreaterThan(0);
     expect(await waitForExecutionId(apiClient, fixture.taskId, fixture.sessionId)).toBe(
       executionId,
     );

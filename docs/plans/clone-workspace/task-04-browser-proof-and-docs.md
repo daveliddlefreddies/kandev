@@ -57,7 +57,7 @@ feature works, then update this package's execution and specification statuses.
 ## Out of scope
 
 Broad local QA/review/verify passes, new screenshots or videos, performance
-benchmarks, commits, pushes, PR creation, and unrelated E2E cleanup.
+benchmarks, commits, pushes, PR creation, and unrelated E2E cleanup outside user-authorized PR CI remediation.
 
 ## Acceptance
 
@@ -125,6 +125,12 @@ do not substitute a broad suite for the focused evidence.
 
 - `apps/web/e2e/tests/settings/workspace-clone.spec.ts` (new).
 - `apps/web/e2e/tests/settings/mobile-workspace-clone.spec.ts` (new).
+- `apps/web/e2e/tests/session/transient-turn-runtime-continuity.spec.ts` and
+  `apps/web/e2e/tests/task/mobile-task-switch-efficiency.spec.ts`,
+  `apps/web/e2e/tests/settings/profile-capability-discovery.spec.ts` and
+  `apps/web/e2e/tests/settings/mobile-profile-capability-discovery.spec.ts` and
+  `apps/web/e2e/tests/task/mobile-directory-browser-hidden-folders.spec.ts`
+  for user-authorized PR CI test repairs.
 - `apps/web/e2e/helpers/workspace-clone.ts` (new only if shared setup warrants it).
 - `apps/web/e2e/helpers/api-client.ts` only for necessary reusable fixture methods.
 - `docs/public/tasks-and-workflows.md`.
@@ -240,3 +246,85 @@ trigger width. The menu now fits its label within viewport bounds. The
 desktop regression fails against the former wrapping row and passes with
 the final content width; the latest desktop and phone results above include
 this adjustment. Fresh screenshots are recaptured after the final commit.
+
+
+### PR CI browser-test repairs
+
+The user requested CI and review remediation for PR #4311. At head
+`9adb6da3b300a93d998877a33f0d87e10d927562`, E2E run `37713048747`
+failed shard 10/14; report and aggregate gates failed because of that shard.
+The desktop completed-tools continuity test required the transient retry card
+after reload/second-viewer navigation, although the five-second continuation
+had already completed. Local reproduction at exact CI merge
+`0696a3a4f3e5724d1411a98dff8235de42a31b98` also rejected the valid
+"Waiting to reconnect" phase because it expected "Continuing".
+
+The test now verifies history preservation initially and completed continuation
+in both viewers. Exact runtime/process/ACP session, prompt-count, completed
+side-effect and execution-ID checks remain. No production logic or timeout
+changed. RED log: `/tmp/kandev-run.e2e.klRp67mG.log`; GREEN: four repetitions,
+retries disabled, 1.2m,
+`/tmp/clone-fixup-e2e-local/kandev-run.e2e.QzGRfErS.log`.
+
+The same shard recorded one flaky mobile PR drawer close. Its original failed
+attempt tapped Close during the entrance animation: visibility assertion began
+at 1791428011335 and Close tap at 1791428011370. The test uses the existing
+finite-animation helper before the native Close tap; the drawer-removal
+assertion and timeout remain unchanged. Before this change, the exact case
+passed four local repetitions, and the full spec passed twelve repetitions
+under a one-core CPU cap. The corrected mobile case passed the full shard replay; final CI remains pending.
+
+All browser reproductions use disposable fixture data and fresh production
+assets in an owned detached checkout, one worker, CI mode, no retries,
+a 4 GB memory limit, no swap and bounded CPU. Source/product behavior remains
+unchanged; these repairs remove assumptions about transient UI timing.
+
+
+The shard replay also exposed a profile-discovery assertion capturing the
+raw `mock-fast` label before model names hydrated, then rejecting `Mock Fast`.
+`ModelPicker` intentionally displays a configured ID until its catalog entry
+arrives, while the fixture keeps the same selected model. Desktop success/
+failure update tests and the corresponding phone draft helper now await the
+fixture's resolved `Mock Fast` label before capturing their before-update value.
+Selection-preservation and persisted-model assertions are unchanged. The
+original failed shard replay is the RED evidence; focused GREEN is recorded below.
+
+
+The same replay also measured the phone hidden-folder touch control before
+its popover's scale animation settled (1.718px difference from the expected height).
+The first case now uses the same existing finite-animation wait as the second
+case before measuring. The 44px target, original 1px tolerance and native
+touch/selectability assertions remain unchanged. Focused GREEN is recorded below.
+
+
+Shard replay completed with retries disabled: 245 passed, one skipped and the
+two additional profile-label/popover-geometry failures in 36.8m, log
+`/tmp/clone-fixup-e2e-local/kandev-run.e2e.fiwfzzAw.log`. The original
+continuity and PR-drawer failures both passed in the exact shard file order.
+The manifest retained its 91 files, both projects, 1266 catalog units and
+assignment/order; only candidate source hashes/checksum were refreshed and
+validated before the managed runner. RED contexts/blob remain in the owned
+`/tmp/clone-fixup-shard10-red-artifacts` directory.
+
+After adding the label/geometry readiness guards, all three affected specs
+passed four repetitions across their desktop/phone projects: 40/40, retries
+disabled, 3.5m, log
+`/tmp/clone-fixup-e2e-local/kandev-run.e2e.tKjoUxXG.log`. All five edited
+browser specs pass scoped ESLint and Prettier; web TypeScript passes. Catalog validation (362
+decisions/1438 specifications), specification lint, actual changed-file
+coverage and whitespace checks pass. Final remote CI remains pending.
+
+Commands from the disposable exact-CI checkout, with installed Go/Node/pnpm
+on PATH and CI=true, GOMAXPROCS=2, GOMEMLIMIT=1GiB, GOGC=30 and
+NODE_OPTIONS=--max-old-space-size=3072:
+
+```bash
+systemd-run --user --scope --quiet --collect -p MemoryMax=4G -p MemorySwapMax=0 -p CPUQuota=200% scripts/run-quiet e2e --summary -- pnpm --dir apps/web e2e:run --host --no-build --project chromium -- e2e/tests/session/transient-turn-runtime-continuity.spec.ts --grep 'completed tools continue once' --retries=0 --repeat-each=4
+systemd-run --user --scope --quiet --collect -p MemoryMax=4G -p MemorySwapMax=0 -p CPUQuota=200% scripts/run-quiet e2e --summary -- pnpm --dir apps/web e2e:run --host --no-build --project chromium -- --project=chromium --project=mobile-chrome e2e/tests/settings/profile-capability-discovery.spec.ts e2e/tests/settings/mobile-profile-capability-discovery.spec.ts e2e/tests/task/mobile-directory-browser-hidden-folders.spec.ts --retries=0 --repeat-each=4
+```
+
+The full shard replay first validated the refreshed downloaded manifest with
+`readManifest`/`resolveShard` from `run-planned-shard.ts`, then passed all
+shard-10 files to the same guarded managed runner with both projects and
+`--retries=0`. Subsequent changes only add readiness guards to the three
+locally failing specs; the passing original cases need no additional rerun.
