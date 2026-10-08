@@ -207,3 +207,10 @@ Implemented stable-ID Sort dragging and shared More menus for Sort, automatic co
 - The fixture now stops the stale tracker before deleting its directory. Reconciliation still performs the pruning and subscription-detachment assertions under test.
 - Local verification passed: the focused test with `-race -count=3`, the full process package with `-race`, Windows amd64 test-binary cross-compilation, `golangci-lint run ./... --new-from-rev="a8bfce19fc299a4243af4c7be63c32e1a14dc7d5" --timeout=5m`, and `git diff --check`. The Linux runner does not reproduce Windows directory-lock semantics.
 - Exact-head CI and the E2E retry-summary audit are pending after this remediation push.
+
+### Post-merge E2E retry remediation
+
+- PR #4295 merged at `1769b9abafea5c45c0798409e33dbaa6236d0f3b`. Its final head `08d135673deb4a504c8a460bfc079a41b7de8eb9` passed CI, but run `37751538803` recorded nine flaky verdicts: one preview session-tab case, six port-forward cases, one task-create tooltip case, and one mobile file-tree case. These test-only corrections are delivered in a separate follow-up PR based on the merged main branch.
+- Port-forward fixtures prepare the session, subscribe the browser, then start the agent, so readiness cannot precede the browser subscription. The remote executor default is reset in `finally`. Preview opening waits for the board's persisted primary-session projection. Tooltip cases expand task navigation and restore the prior sidebar layout. Mobile fixtures push their commit to the remote before task creation, verify the files in the task worktree and reveal the virtualized directory row.
+- Local managed E2E uses one worker and no retries. The full port-forward spec passed 17/17. Sidebar customization followed by tooltip coverage passed 9/9; the corrected preview session-tab case passed three consecutive runs. Both mobile file-tree tests passed three consecutive runs each (6/6). The follow-up exact-head CI/retry audit remains pending.
+- Web typecheck, scoped ESLint, the managed E2E build, Prettier, and whitespace checks passed. No production behavior or public documentation changes are required.
