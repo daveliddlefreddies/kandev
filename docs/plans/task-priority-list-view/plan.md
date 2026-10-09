@@ -114,10 +114,16 @@ display surfaces. Production behavior is unchanged.
 
 Hosted CI exposed a workflow lifecycle test race: a newly primary session can
 still be starting when its tab displays the profile name. The lifecycle test
-now waits for that exact primary session to reach `WAITING_FOR_INPUT` before
-checking its model-derived tab title. It retains the existing timeout and all
+now captures profile A's prior turn IDs before the return move and waits for
+a new completed turn on the matching primary session in `WAITING_FOR_INPUT`
+before checking its model-derived tab title. The return step explicitly seeds
+`/e2e:simple-message`; an empty prompt intentionally does not start another turn
+on an existing session. Reusing a parked session's old
+waiting state cannot satisfy this wait. It retains the existing timeout and all
 profile, session-count, primary-star, model-label and reload assertions.
-Four lifecycle combinations passed locally with zero retries after the correction.
+The original wait passed a no-return-turn mutation; the repaired wait rejected
+that same mutation at the readiness assertion. Four lifecycle combinations
+passed locally with zero retries after the correction.
 
 - Focused Vitest: 40 tests passed across 3 files.
 - Web typecheck, ESLint (`--max-warnings 0`), Prettier, `i18n:check`,

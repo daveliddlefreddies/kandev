@@ -103,6 +103,11 @@ None. `TaskPriorityIndicator` and the HTTP `Task.priority` field already exist.
   The SPA passes it to `TasksPageClient`; this is not server-rendered row HTML.
 
 - Hosted CI remediation makes the existing workflow profile lifecycle test wait
-  for the matching primary session to reach `WAITING_FOR_INPUT` before tab-label
-  checks. No production behavior or assertion timeout changed. All four
-  reuse/new and complete/park combinations passed with zero retries.
+  for a new completed turn on the matching primary session in
+  `WAITING_FOR_INPUT` before tab-label checks, using the pre-move profile A turn
+  IDs to exclude its prior turn. The return step seeds `/e2e:simple-message`
+  so the existing-session empty-prompt suppression does not make the fixture idle.
+  A no-return-turn mutation passed the old wait
+  and failed the repaired readiness assertion. No production behavior or
+  assertion timeout changed. All four reuse/new and complete/park combinations
+  passed with zero retries.
