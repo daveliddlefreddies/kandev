@@ -14,7 +14,8 @@ Kanban tasks use four priority tokens: `critical`, `high`, `medium`, and `low`.
 People can see non-medium priorities on task cards and can set the priority when
 they create or triage a task. Existing task storage, APIs, and events already
 carry the value. This capability makes that value visible and usable on the
-kanban board without changing the task model or priority vocabulary.
+kanban board, task switcher, and `/tasks` list without changing the task model
+or priority vocabulary.
 
 The `tasks` system owns this capability because priority is part of the durable
 task record. The board, task switcher and task list view are presentation and
