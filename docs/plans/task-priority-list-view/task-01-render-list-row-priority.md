@@ -101,3 +101,8 @@ None. `TaskPriorityIndicator` and the HTTP `Task.priority` field already exist.
 - Review remediation corrected the system design to identify
   `routeData.tasksPage.tasks` in the Go boot payload as the initial task source.
   The SPA passes it to `TasksPageClient`; this is not server-rendered row HTML.
+
+- Hosted CI remediation makes the existing workflow profile lifecycle test wait
+  for the matching primary session to reach `WAITING_FOR_INPUT` before tab-label
+  checks. No production behavior or assertion timeout changed. All four
+  reuse/new and complete/park combinations passed with zero retries.

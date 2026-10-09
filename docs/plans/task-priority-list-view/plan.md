@@ -110,7 +110,14 @@ UI-03 covers `.4` and `.5`.
 
 Review remediation corrected the first-render design description to name the Go
 route boot payload and expanded the requirements overview to name all priority
-display surfaces. Production behavior and test scope are unchanged.
+display surfaces. Production behavior is unchanged.
+
+Hosted CI exposed a workflow lifecycle test race: a newly primary session can
+still be starting when its tab displays the profile name. The lifecycle test
+now waits for that exact primary session to reach `WAITING_FOR_INPUT` before
+checking its model-derived tab title. It retains the existing timeout and all
+profile, session-count, primary-star, model-label and reload assertions.
+Four lifecycle combinations passed locally with zero retries after the correction.
 
 - Focused Vitest: 40 tests passed across 3 files.
 - Web typecheck, ESLint (`--max-warnings 0`), Prettier, `i18n:check`,

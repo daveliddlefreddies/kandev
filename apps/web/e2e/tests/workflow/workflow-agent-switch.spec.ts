@@ -251,12 +251,18 @@ async function runProfileSessionLifecycleScenario(
       async () => {
         const { sessions } = await apiClient.listTaskSessions(task.id);
         return startPolicy === "reuse"
-          ? sessions.some((item) => item.id === originalASessionId && item.is_primary)
+          ? sessions.some(
+              (item) =>
+                item.id === originalASessionId &&
+                item.is_primary &&
+                item.state === "WAITING_FOR_INPUT",
+            )
           : sessions.some(
               (item) =>
                 item.agent_profile_id === profileA.id &&
                 item.id !== originalASessionId &&
-                item.is_primary,
+                item.is_primary &&
+                item.state === "WAITING_FOR_INPUT",
             );
       },
       { timeout: 30_000 },
