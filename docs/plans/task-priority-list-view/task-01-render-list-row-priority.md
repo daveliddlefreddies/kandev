@@ -97,3 +97,7 @@ None. `TaskPriorityIndicator` and the HTTP `Task.priority` field already exist.
   archived badge, and the medium, empty, unknown and absent fallback.
 - Desktop E2E seeds critical and medium tasks; mobile E2E asserts the indicator
   on a critical rich row alongside the existing no-overflow check.
+
+- Review remediation corrected the system design to identify
+  `routeData.tasksPage.tasks` in the Go boot payload as the initial task source.
+  The SPA passes it to `TasksPageClient`; this is not server-rendered row HTML.

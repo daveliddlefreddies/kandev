@@ -108,6 +108,9 @@ UI-03 covers `.4` and `.5`.
 
 ## Verification results
 
+Review remediation corrected the first-render design description to name the Go
+route boot payload. Production behavior and test scope are unchanged.
+
 - Focused Vitest: 40 tests passed across 3 files.
 - Web typecheck, ESLint (`--max-warnings 0`), Prettier, `i18n:check`,
   `i18n:ratchet` and `e2e:sleep-ratchet` passed.

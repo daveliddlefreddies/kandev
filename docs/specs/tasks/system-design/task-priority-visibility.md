@@ -88,7 +88,8 @@ adapters: the desktop `buildSidebarItem` path and the phone or tablet
 `toSheetItem` path. Both paths read the same `kanbanMulti.snapshots` task data.
 
 The task list view reads `priority` directly from the HTTP `Task` returned by
-the workspace task list endpoint and from the server-rendered initial task list.
+the workspace task list endpoint and from `routeData.tasksPage.tasks` in the Go
+boot payload. The SPA route passes these initial tasks to `TasksPageClient`.
 The backend task DTO already carries the field, so no contract change is needed.
 The task switcher does not store another priority value.
 
